@@ -15,17 +15,17 @@ const ProfileDropdown = ({
   return <div className="relative">
     <button
         onClick={onToggle}
-        className="flex items-center space-x-3"
+        className="flex items-center space-x-3 p-2 rounded-xl hover:bg-gray-50 transition-colors duration-200"
     >
         {avatar ? (
             <img
                 src={avatar}
                 alt="Avatar"
-                className=""
+                className="h-9 w-9 object-cover rounded-xl"
             />
         )   :   (
-            <div className="">
-                <span className="">
+            <div className="h-8 w-8 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl flex items-center justify-center">
+                <span className="text-white font-semi">
                     {companyName.charAt(0).toUpperCase()}
                 </span>
             </div>
