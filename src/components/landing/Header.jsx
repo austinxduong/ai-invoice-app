@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"
 import { FileText, Menu, X } from "lucide-react";
+import ProfileDropdown from "../layout/ProfileDropdown";
 
 const Header = () => {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -58,7 +59,17 @@ const Header = () => {
                             </div>
                             <div className="hidden lg:flex items-center space-x-4">
                                 {isAuthenticated ? (
-                                <>Get Started</> 
+                                <ProfileDropdown
+                                    isOpen={profileDropdownOpen}
+                                    onToggle={(e) => {
+                                        e.stopPropagation();
+                                        setProfileDropdownOpen(!profileDropdownOpen);
+                                    }}
+                                    avatar={user?.avatar || ""}
+                                    companyName={user?.name || ""}
+                                    email={user?.email || ""}
+                                    onLogout={logout}
+                                    />
                                 ) : (
                                 <>                                
                                 <Link
