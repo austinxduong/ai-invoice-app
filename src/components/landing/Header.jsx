@@ -114,13 +114,13 @@ const Header = () => {
                             </a>
                             <a 
                                 href="#testimonials"
-                                className=""
+                                className="block px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium transition colors duration-200"
                             >
                                 Testimonials
                             </a>
                             <a
                                 href="#faq"
-                                className=""
+                                className="block px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium transition colors duration-200"
                             >
                                 FAQ
                             </a>
