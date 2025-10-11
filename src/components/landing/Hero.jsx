@@ -12,7 +12,7 @@ const Hero = () => {
           AI-Powered Invoicing App, for your Enterprise Business
           </h1>
           <p className="text-xl sm:text-xl text-gray-700 mb-8 leading-relaxed max-w-3xl mx-auto">
-            Our AI creates invoices, generate payment reminders, and provide smart insights to help manage your finances
+            Our AI creates invoices, generate payment reminders, and provide smart reports to help manage your finances.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             {isAuthenticated ? (
