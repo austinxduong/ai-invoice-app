@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { FileText, Menu, X } from "lucide-react";
 import ProfileDropdown from "../layout/ProfileDropdown";
 import Button from "../ui/Button";
@@ -11,6 +11,8 @@ const Header = () => {
     const isAuthenticated = true;
     const user = {name:'austi', email:'austiiduo@gmail.com'}
     const logout = () => {}
+
+    const navigate = useNavigate();
 
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
@@ -118,11 +120,11 @@ const Header = () => {
                             >
                                 Testimonials
                             </a>
-                            <a 
-                                href ="#ourteam"
+                            <a
+                                href="ourteam"
                                 className="block px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium transition colors duration-200"
                             >
-                                Our Team (curr just me)
+                                Our team (curr just me)
                             </a>
                             <a
                                 href="#faq"
