@@ -26,3 +26,30 @@ export const FEATURES = [
     "Easily manage all your invoices, track payments, and send reminders from Accounts Payable"
   }
 ]
+
+export const TESTIMONIALS = [
+  {
+    quote:"sample quote0",
+    author:"sample author0",
+    title:"sample title0",
+    avatar:"sample avatar0",
+  },
+  {
+    quote:"sample quote1",
+    author:"sample author1",
+    title:"sample title1",
+    avatar:"sample avatar1",
+  },
+  {
+    quote:"sample quote2",
+    author:"sample author2",
+    title:"sample title2",
+    avatar:"sample avatar2",
+  },
+  {
+    quote:"sample quote3",
+    author:"sample author3",
+    title:"sample title3",
+    avatar:"sample avatar3",
+  },
+]
