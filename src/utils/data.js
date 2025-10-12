@@ -32,24 +32,24 @@ export const TESTIMONIALS = [
     quote:"sample quote0",
     author:"sample author0",
     title:"sample title0",
-    avatar:"sample avatar0",
+    avatar:"https://t4.ftcdn.net/jpg/14/39/45/13/360_F_1439451345_QlgFYvVJNXUwG6hsMlfJ5YQ3dJvsKLQb.jpg",
   },
   {
     quote:"sample quote1",
     author:"sample author1",
     title:"sample title1",
-    avatar:"sample avatar1",
+    avatar:"https://t4.ftcdn.net/jpg/14/39/45/13/360_F_1439451345_QlgFYvVJNXUwG6hsMlfJ5YQ3dJvsKLQb.jpg",
   },
   {
     quote:"sample quote2",
     author:"sample author2",
     title:"sample title2",
-    avatar:"sample avatar2",
+    avatar:"https://t4.ftcdn.net/jpg/14/39/45/13/360_F_1439451345_QlgFYvVJNXUwG6hsMlfJ5YQ3dJvsKLQb.jpg",
   },
   {
     quote:"sample quote3",
     author:"sample author3",
     title:"sample title3",
-    avatar:"sample avatar3",
+    avatar:"https://t4.ftcdn.net/jpg/14/39/45/13/360_F_1439451345_QlgFYvVJNXUwG6hsMlfJ5YQ3dJvsKLQb.jpg",
   },
 ]
