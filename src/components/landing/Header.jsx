@@ -124,7 +124,7 @@ const Header = () => {
                                 href="ourteam"
                                 className="block px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium transition colors duration-200"
                             >
-                                Our team (curr just me)
+                                Our team (curr just me/founding engineer)
                             </a>
                             <a
                                 href="#faq"
