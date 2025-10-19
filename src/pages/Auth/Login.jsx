@@ -12,6 +12,7 @@ import { API_PATHS } from "../../utils/apiPaths";
 import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
+import { validateEmail, validatePassword } from '../../utils/helper';
 
 const Login = () => {
 
@@ -36,7 +37,25 @@ const Login = () => {
     password: false,
   });
 
-  const handleInputChange = (e) => {};
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    
+    if (touched[name]) {
+      const newFieldErrors = { ...fieldErrors};
+      if (name === "email") {
+        newFieldErrors.email = validateEmail(value);
+      } else if (name === "password") {
+       newFieldErrors.password = validatePassword(value);
+      }
+      setFieldErrors(newFieldErrors);
+    }
+    
+    if (error) setError("");
+  };
 
   const handleBlur = (e) => {};
 
