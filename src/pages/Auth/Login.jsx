@@ -73,10 +73,15 @@ const Login = () => {
     setFieldErrors(newFieldErrors);
   }
 
+  const isFormValid = () => {
+    const emailError = validateEmail(formData.email);
+    const passwordError = validatePassword(formData.password);
+    return !emailError && !passwordError && formData.email && formData.password;
+  };
 
-  const isFormValid = () => {};
+  const handleSubmit = async () => {
 
-  const handleSubmit = async () => {};
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
