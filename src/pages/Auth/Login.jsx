@@ -49,7 +49,7 @@ const Login = () => {
       if (name === "email") {
         newFieldErrors.email = validateEmail(value);
       } else if (name === "password") {
-       newFieldErrors.password = validatePassword(value);
+        newFieldErrors.password = validatePassword(value);
       }
       setFieldErrors(newFieldErrors);
     }
@@ -57,7 +57,22 @@ const Login = () => {
     if (error) setError("");
   };
 
-  const handleBlur = (e) => {};
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+
+    const newFieldErrors = { ...fieldErrors};
+    if (name === "email") {
+      newFieldErrors.email = validateEmail(formData.email);
+    } else if (name === "password") {
+      newFieldErrors.password = validatePassword(formData.password);
+    }
+    setFieldErrors(newFieldErrors);
+  }
+
 
   const isFormValid = () => {};
 
@@ -92,8 +107,8 @@ const Login = () => {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  onBlue={handleBlur}
-                  className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all${
+                  onBlur={handleBlur}
+                  className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all ${
                     fieldErrors.email && touched.email
                     ? "border-red-300 focus:ring-red-500"
                     : "border-gray-300 focus:ring-black" 
