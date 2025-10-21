@@ -117,7 +117,9 @@ const Login = () => {
                   />
                 </div>
                 {fieldErrors.email && touched.email && (
-                  <p className="">{fieldErrors.email}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {fieldErrors.email}
+                  </p>
                 )}
               </div>
 
