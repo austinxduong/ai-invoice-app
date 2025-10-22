@@ -80,8 +80,54 @@ const Login = () => {
   };
 
   const handleSubmit = async () => {
+    // Validate all fields before submission
+    const emailError = validateEmail(formData.email);
+    const passwordError = validatePassword(formData.password);
 
-  }
+    if (emailError || passwordError) {
+      setFieldErrors({
+        email: emailError,
+        password: passwordError,
+      });
+      setTouched({
+        email: true,
+        password: true,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, formData);
+
+      if (response.status === 200) {
+        const { token } = response.data;
+
+        if (token) {
+          setSuccess("Login successful");
+          login(response.data, token);
+
+          // Redirect based on role
+          setTimeout(() => {
+            window.location.href = "/dashboard";
+          }, 2000);
+        }
+      } else {
+        setError(response.data.message || "Invalid credentials");
+      }
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("An error occurred during login.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
