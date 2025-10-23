@@ -54,7 +54,7 @@ const Login = () => {
       setFieldErrors(newFieldErrors);
     }
     
-    if (error) setError("");
+    if (error) setError("");x
   };
 
   const handleBlur = (e) => {
@@ -161,17 +161,13 @@ const Login = () => {
                   onBlur={handleBlur}
                   className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all ${
                     fieldErrors.email && touched.email
-                    ? "border-red-300 focus:ring-red-500"
-                    : "border-gray-300 focus:ring-black" 
+                    ? "border-red-300 focus:ring-red-500" //truthy
+                    : "border-gray-300 focus:ring-black" // falsey
                   }`}
                   placeholder="Enter your Email"
                   />
                 </div>
-                {fieldErrors.email && touched.email && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {fieldErrors.email}
-                  </p>
-                )}
+                {fieldErrors.email && touched.email && (<p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>)}
               </div>
 
               <div>
@@ -189,8 +185,8 @@ const Login = () => {
                     onBlur={handleBlur}
                     className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all ${
                       fieldErrors.password && touched.password
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-black"
+                        ? "border-red-300 focus:ring-red-500" // truthy
+                        : "border-gray-300 focus:ring-black" // falsey
                     }`}
                     placeholder="Enter your password"
                     />
@@ -199,11 +195,7 @@ const Login = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-3.5 transform -transform-y-1/2 text-gray-400 hover-text-gray-600 transition-colors"
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                ) : (
-                      <Eye className="w-5 h-5" />
-                )}
+                    {showPassword ? /*truthy*/ (<EyeOff className="w-5 h-5" />) /*falsey*/ : (<Eye className="w-5 h-5" />)}  
                 </button>
               </div>
               {fieldErrors.password && touched.password && (
