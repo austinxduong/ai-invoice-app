@@ -46,15 +46,98 @@ const SignUp = () => {
     confirmPassword: false,
   });
 
-  const validateName = (name) => {};
+  const validateName = (name) => {
+    if (!name) return "Name is required";
+    if (name.length < 2 ) return "Name must be at least 2 characters";
+    if (name.length > 50) return "Name must be less than 50 characters"
+    return "";
+  };
 
-  const validateConfirmPassword = (confirmPassword, password) => {};
+  const validateConfirmPassword = (confirmPassword, password) => {
+    if (!confirmPassword) return "Please confirm your password";
+    if (confirmPassword !== password) return "Passwords do not match";
+    return "";
+  };
 
-  const handleInputChange = (e) => {};
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
 
-  const handleBlur = (e) => {};
+    // Real-time validation
+    if (touched[name]) {
+      const newFieldErrors = { ...fieldErrors };
+      if (name === "name") {
+        newFieldErrors.name = validateName(value);
+      } else if (name === "email") {
+        newFieldErrors.email = validateEmail(value);
+      } else if (name === "password") {
+        newFieldErrors.password = validatePassword(value);
+        // Also revalidate confirm password if it's been touched
+        if (touched.confirmPassword) {
+          newFieldErrors.confirmPassword = validateConfirmPassword(
+            formData.confirmPassword,
+            value
+          );
+        }
+      } else if (name === "confirmPassword") {
+        newFieldErrors.confirmPassword = validateConfirmPassword(
+          value,
+          formData.password
+        );
+      }
+      setFieldErrors(newFieldErrors);
+    }
 
-  const isFormValid = () => {};
+    if (error) setError("");
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+
+    // Validate on blur
+    const newFieldErrors = { ...fieldErrors };
+    if (name === "name") {
+      newFieldErrors.name = validateName(formData.name);
+    } else if (name === "email") {
+      newFieldErrors.email = validateEmail(formData.email);
+    } else if (name === "password") {
+      newFieldErrors.password = validatePassword(formData.password);
+    } else if (name === "confirmPassword") {
+      newFieldErrors.confirmPassword = validateConfirmPassword(
+        formData.confirmPassword,
+        formData.password
+      );
+    }
+    setFieldErrors(newFieldErrors);
+  };
+
+  const isFormValid = () => {
+    const nameError = validateName(formData.name);
+    const emailError = validateEmail(formData.email);
+    const passwordError = validatePassword(formData.password);
+    const confirmPasswordError = validateConfirmPassword(
+      formData.confirmPassword,
+      formData.password
+    );
+
+    return (
+      !nameError &&
+      !emailError &&
+      !passwordError &&
+      !confirmPasswordError &&
+      formData.name &&
+      formData.email &&
+      formData.password &&
+      formData.confirmPassword
+    );
+  };
 
   const handleSubmit = async () => {};
 
