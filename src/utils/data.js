@@ -1,4 +1,4 @@
-import { BarChart2, FileText, Mail, Sparkles } from "lucide-react"
+import { BarChart2, FileText, LayoutDashboard, Mail, Sparkles, Plus, Users } from "lucide-react"
 
 export const FEATURES = [
   {
@@ -52,4 +52,11 @@ export const TESTIMONIALS = [
     title:"sample title3",
     avatar:"https://t4.ftcdn.net/jpg/14/39/45/13/360_F_1439451345_QlgFYvVJNXUwG6hsMlfJ5YQ3dJvsKLQb.jpg",
   },
+]
+
+export const NAVIGATION_MENU = [
+ { id: "dashboard", name: "Dashboard", icon: LayoutDashboard},
+ { id: "invoices", name: "Invoices", icon: FileText },
+ { id: "invoices/me", name: "Create Invoice", icon: Plus },
+ { id: "profile", name: "Profile", icon: Users }
 ]
