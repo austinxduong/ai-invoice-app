@@ -20,6 +20,30 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      try {
+        const response = await axiosInstance.get(
+          API_PATHS.INVOICE.GET_ALL_INVOICES
+        );
+        const invoices = response.data;
+
+        const totalInvoices = invoices.length;
+        const totalPaid = invoices
+          .filter((inv) => inv.status === "Paid")
+          .reduce((acc, inv) => acc + inv.total, 0);
+        const totalUnpaid = invoices
+          .filter((inv) => inv.status !== "Paid")
+          .reduce((acc, inv) => acc + inv.total, 0);
+        
+        setStats({ totalInvoices, totalPaid, totalUnpaid });
+        setRecentInvoices(
+          invoices.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate))
+          .slice(0, 5)
+        );
+      } catch (error) {
+        console.error("Failed to fetch dashboard date", error);
+      } finally {
+        setLoading(false);
+      }
 
     };
 
@@ -62,7 +86,45 @@ const Dashboard = () => {
   }
 
   return (
-    <div>Dashboard</div>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold text-slate-900">Dashboard</h2>
+        <p className="text-sm text-slate-600 mt-1">
+          A quick overview of your business finances.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {statsData.map((stat,index) => (
+          <div 
+            key={index}
+            className="bg-white p-4 rounded-xl border border-slate-200 shadow-lg shadow-gray-100"
+          >
+            <div className="flex items-center">
+              <div  
+                className={`flex-shrink-0 w-12 h-12 ${
+                  colorClasses[stat.color].bg
+                } rounded-lg flex items-center justify-center`}
+              >
+                <stat.icon
+                  className={`w-6 h-6 ${colorClasses[stat.color].text}`}
+                />
+                </div>
+                <div className="ml-4 min-w-0">
+                  <div className="text-sm font-medium text-slate-500 truncate">
+                    {stat.label}
+                  </div>
+                  <div className="text-2xl font-bold text-slate-900 break-words">
+                    {stat.value}
+                  </div>
+                </div>
+              </div>
+            </div>
+        ))}
+      </div>
+
+      </div>
+
   )
 }
 
