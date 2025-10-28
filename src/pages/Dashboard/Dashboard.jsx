@@ -5,6 +5,7 @@ import { Loader2, FileText, DollarSign, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import Button from "../../components/ui/Button"
+import AIInsightsCard from "../../components/AIInsightsCard";
 
 const Dashboard = () => {
 
@@ -123,6 +124,8 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      <AIInsightsCard/>
 
       {/* recent invoices? */}
       <div className="w-full bg-white border border-slate-200 rounded-lg shadow-sm shadow-gray-100 overflow-hidden">
