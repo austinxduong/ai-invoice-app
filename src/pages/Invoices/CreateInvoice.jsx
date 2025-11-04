@@ -92,16 +92,17 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
     }
   }, [existingInvoice]);
 
-  const handleInputChange = (e, section, index) => {
+  // function for static handling previous info as placeholders for form
+  const handleInputChange = (e, billToBillFromSection, index) => {
     const { name, value } = e.target;
-    if (section) {
-      setFormData((prev) => ({ ...prev, [section]: { ...prev[section], [name]: value } }));
+    if (billToBillFromSection) {
+      setFormData((prevValue) => ({ /*key */...prevValue, [billToBillFromSection]: /*value*/ { ...prevValue[billToBillFromSection], [name]: value } }));
     } else if (index !== undefined) {
       const newItems = [...formData.items];
       newItems[index] = { ...newItems[index], [name]: value };
-      setFormData((prev) => ({ ...prev, items: newItems }));
+      setFormData((prevValue) => ({ ...prevValue, items: newItems }));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormData((prevValue) => ({ ...prevValue, [name]: value }));
     }
   };
 
@@ -136,7 +137,7 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
     setLoading(true);
   }
  
-  return (<form onSubmit={handleSubmit} className="space-y-8">
+  return (<form onSubmit={handleSubmit} className="space-y-8 pb-[100vh]">
     <div className="flex justify-between items-center">
       <h2 className="text-xl font-semibold text-slate-900">{existingInvoice ? "Edit Invoice" : "Create Invoice"}</h2>
       <Button type="submit" isLoading={loading || isGeneratingNumber}>
@@ -173,6 +174,53 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
         <InputField label="Client Email" type="email" name="email" value={formData.billTo.email} onChange={(e) => handleInputChange(e, "billTo")} />
         <InputField label="Client Address" name="address" value={formData.billTo.address} onChange={(e) => handleInputChange(e, "billTo")} />
         <InputField label="Client Phone" name="phone" value={formData.billTo.phone} onChange={(e) => handleInputChange(e, "billTo")} />
+      </div>
+    </div>
+
+    <div className="bg-white border border-slate-200 rounded-lg shadow-sm shadow-gray-100 overflow-hidden">
+      <div className="p-4 sm:p-6 border-b border-slate-200 bg-slate-50">
+        <h3 className="text-lg font-semibold text-slate-900">Items</h3>
+      </div>
+      <div className="oveflow-x-auto">
+        <table className="w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Item</th>
+              <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Qty</th>
+              <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Price</th>
+              <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tax (%)</th>
+              <th className="px-2 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Total</th>
+              <th className="px-2 sm:px-6 py-3"></th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-200">
+            {formData.items.map((item, index) => (
+              <tr key={index} className="hover: bg-slate-50">
+                <td className="px-2 sm:px-6 py-4">
+                  <input type="text" name="name" value={item.name} onChange={(e) => handleInputChange(e, null, index)} className="w-full h-10 px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-blue-500 focus:border-transparent" placeholder="Item name"/>
+                  </td>
+                  <td className="px-2 sm:px-6 py-4">
+                    <input type="number" name="quantity" value={item.quantity} onChange={(e) => handleInputChange(e, null, index)} className="w-full h-10 px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-blue-500 focus:border-transparent" placeholder="1" />
+                  </td>
+                  <td className="px-2 sm:px-6 py-4">
+                    <input type="number" name="unitPrice" value={item.unitPrice} onChange={(e) => handleInputChange(e, null, index)} className="w-full h-10 px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-blue-500 focus:border-transparent" placeholder="0.00" />
+                  </td>
+                  <td className="px-2 sm:px-6 py-4">
+                    <input type="number" name="taxPercent" value={item.taxPercent} onChange={(e) => handleInputChange(e, null, index)} className="w-full h-10 px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-blue-500 focus:border-transparent" placeholder="0" />
+                  </td>
+                  <td className="px-2 sm:px-6 py-4 text-sm text-slate-500">${((item.quantity || 0) * (item.unitPrice || 0) * (1 + (item.taxPercent) || 0 / 100)).toFixed(2)}</td>
+                  <td className="px-2 sm:px-6 py-4">
+                    <Button type="button" variant="ghost" size="small" onClick={() => handleRemoveItem(index)}>
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </td>
+                </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="p-4 sm:p-6 border-t border-slate-200">
+        <Button type="button" variant="secondary" onClick={handleAddItem} icon={Plus}>Add Item</Button>
       </div>
     </div>
   </form>
