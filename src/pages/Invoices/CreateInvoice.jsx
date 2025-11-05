@@ -93,10 +93,10 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
   }, [existingInvoice]);
 
   // function for static handling previous info as placeholders for form
-  const handleInputChange = (e, billToBillFromSection, index) => {
-    const { name, value } = e.target;
+  const handleInputChange = (event, billToBillFromSection, index) => {
+    const { name, value } = event.target;
     if (billToBillFromSection) {
-      setFormData((prevValue) => ({ /*key */...prevValue, [billToBillFromSection]: /*value*/ { ...prevValue[billToBillFromSection], [name]: value } }));
+      setFormData((prevValueFormData) => ({ /*key */...prevValueFormData, [billToBillFromSection]: /*value*/ { ...prevValueFormData[billToBillFromSection], [name]: value } }));
     } else if (index !== undefined) {
       const newItems = [...formData.items];
       newItems[index] = { ...newItems[index], [name]: value };
@@ -163,7 +163,7 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div className="bg-white p-6 rounded-lg shadow-sm shadow-gray-100 border border-slate-200 space-y-4">
         <h3 className="text-lg font-semibold text-slate-900 mb-2">Bill From</h3>
-        <InputField label="Business Name" name="businessName" value={formData.billFrom.businessName} onChange={(e) => handleInputChange(e, "billFrom")} />
+        <InputField label="Business Name" name="businessName" value={formData.billFrom.businessName} onChange={(e) => handleInputChange(e, "billFrom")}/>
         <InputField label="Email" type="email" name="email" value={formData.billFrom.email} onChange={(e) => handleInputChange(e, "billFrom")} />
         <TextareaField label="Address" name="address" value={formData.billFrom.address} onChange={(e) => handleInputChange(e, "billFrom")} />
         <InputField label="Phone" name="phone" value={formData.billFrom.phone} onChange={(e) => handleInputChange(e, "billFrom")} />
