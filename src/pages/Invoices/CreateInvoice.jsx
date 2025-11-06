@@ -13,6 +13,7 @@ import SelectField from "../../components/ui/SelectField";
 import Button from "../../components/ui/Button";
 
 
+
 const CreateInvoice = ({existingInvoice, onSave}) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,17 +93,19 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
     }
   }, [existingInvoice]);
 
-  // function for static handling previous info as placeholders for form
-  const handleInputChange = (event, billToBillFromSection, index) => {
+  const handleInputChange = (event, billFromBillToKey, index) => {
     const { name, value } = event.target;
-    if (billToBillFromSection) {
-      setFormData((prevValueFormData) => ({ /*key */...prevValueFormData, [billToBillFromSection]: /*value*/ { ...prevValueFormData[billToBillFromSection], [name]: value } }));
+    // ability to type user input via. Bill From / Bill To Section
+    if (billFromBillToKey) {
+      setFormData((billFromBillTo) => ({ /* key */...billFromBillTo, [billFromBillToKey]: { /*value */...billFromBillTo[billFromBillToKey], [name]: value } }));
+      // ability to type user input via. Items 
     } else if (index !== undefined) {
       const newItems = [...formData.items];
+      // ability to add new items with key/value pair
       newItems[index] = { ...newItems[index], [name]: value };
-      setFormData((prevValue) => ({ ...prevValue, items: newItems }));
+      setFormData((newItemsKey) => ({ ...newItemsKey, items: newItems }));
     } else {
-      setFormData((prevValue) => ({ ...prevValue, [name]: value }));
+      setFormData((newItemsKey) => ({ ...newItemsKey, [name]: value }));
     }
   };
 
@@ -116,6 +119,7 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
     });
   };
 
+  // delete/remove items from items list
   const handleRemoveItem = (index) => {
     const newItems = formData.items.filter((_, i) => i !== index);
     setFormData({ ...formData, items: newItems });
@@ -223,7 +227,29 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
         <Button type="button" variant="secondary" onClick={handleAddItem} icon={Plus}>Add Item</Button>
       </div>
     </div>
-  </form>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="bg-white p-6 rounded-lg shadow-sm shadow-gray-100 border border-slate-200 space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">Notes & Terms</h3>
+        <TextareaField label="Notes" name="notes" value={formData.notes} onChange={handleInputChange} />
+        <SelectField
+          label="Payment Terms"
+          name="paymentTerms"
+          value={formData.paymentTerms}
+          onChange={handleInputChange}
+          options={["Net 15", "Net 30", "Net 60", "Due on receipt"]}
+        />
+      </div>
+      <div className="bg-white p-6 rounded-lg shadow-sm shadow-gray-100 border border-slate-200 flex flex-col justify-center">
+        <div className="space-y-4">
+          <div className="flex justify-between text-sm text-slate-600"><p>Subtotal:</p><p>${subtotal.toFixed(2)}</p></div>
+          <div className="flex justify-between text-sm text-slate-600"><p>Tax:</p><p>${taxTotal.toFixed(2)}</p></div>
+          <div className="flex justify-between text-lg font-semibold text-slate-900 border-t border-slate-200 pt-4 mt-4"><p>Total:</p><p>${total.toFixed(2)}</p></div>
+        </div>
+      </div>
+    </div>
+
+</form>
   )
 };
 
