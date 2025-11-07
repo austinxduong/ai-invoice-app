@@ -139,7 +139,27 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-  }
+
+    const itemsWithTotal = formData.items.map((item) => ({
+      ...item,
+      total: (item.quantity || 0) * (item.unitPrice || 0) * (1 +(item.taxPercent || 0) / 100),
+    }));
+    const finalFormData = {...formData, items: itemsWithTotal, subtotal, taxTotal, total};
+
+    if (onSave) {
+      await onSave(finalFormData);
+    } else {
+      try {
+        await axiosInstance.post(API_PATHS.INVOICE.CREATE, finalFormData);
+        toast.success("Invoice created successfully!");
+        navigate("/invoices");
+      } catch (error) {
+        toast.error("Failed to create invoice.");
+        console.error(error);
+      }
+    }
+    setLoading(false);
+  };
  
   return (<form onSubmit={handleSubmit} className="space-y-8 pb-[100vh]">
     <div className="flex justify-between items-center">
