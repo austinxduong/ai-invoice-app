@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from '../../utils/apiPaths'
-import { Loader2, Trash2, Edit, Search, FileText, Plus, AlertCircle, Sparkles, Mail } from lucide-react;
+import { Loader2, Trash2, Edit, Search, FileText, Plus, AlertCircle, Sparkles, Mail } from "lucide-react";
 import moment from 'moment'
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button'
