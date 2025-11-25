@@ -19,6 +19,49 @@ const AllInvoices = () => {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const response = await axiosInstance.get(API_PATHS.INVOICE.GET_ALL_INVOICES);
+        setInvoices(responses.data.sort((a,b) => new Date(b.invoice.Date) - new Date(a.invoiceDate)
+          )
+        );
+      } catch (err) {
+        setError('Failed to fetch invoices.');
+        console.error(err)
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvoices();
+  }, []);
+
+  const handleDelete = async (id) => {
+
+  };
+
+  const handleStatusChange = async (invoice) => {
+
+  };
+
+  const handleOpenReminderModal = (invoiceId) => {
+    setSelectedInvoiceId(invoiceId);
+    setIsReminderModalOpen(true);
+  };
+
+  const filteredInvoices = useMemo(() => {
+    return invoices
+      .filter(invoice => statusFilter === 'All' || invoice.status === statusFilter)
+      .filter(invoice =>
+        invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.billTo.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+  }, [invoices, searchTerm, statusFilter]);
+
+  if (loading) {
+    return <div className="flex justify-center itw-8 h-8 animate-spin text-blue-600"><Loader2 className="" /></div>
+  }
+
   return (
     <div>AllInvoices</div>
   )
