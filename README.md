@@ -8,8 +8,19 @@ feature forecasting:
 
 ```
 bugs:
-~~"An error occured while login in" via. mobile/safari"~~ fixed with ngrok
-"Not found" after logging in
+CORS error on mobile Safari: XMLHttpRequest cannot load http://localhost:8000/api/auth/login due to access control checks
+    Bug Reason:
+    - Network connectivity: Mobile couldn't reach localhost:8000 or local IP addresses
+    - Missing CORS origin: Render deployment URL not in backend's allowed origins
+    Fix:
+    - Used ngrok to create public tunnel: https://crustless-diastrophic-thi.ngrok-free.dev
+    - Added Render frontend URL to backend's allowedOrigins array in server.js:
+
+"Not Found" page after successful login 
+    Bug Reason: 
+    - Routing race condition: Using window.location.href instead of React Router's navigate()
+    Fix: 
+    - Changed from window.location.href = "/dashboard" to navigate("/dashboard") in Login.jsx
 ```
 
 
