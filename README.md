@@ -6,6 +6,14 @@ feature forecasting:
 
 ```
 
+```
+bugs:
+~~"An error occured while login in" via. mobile/safari"~~ fixed with ngrok
+"Not found" after logging in
+```
+
+
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

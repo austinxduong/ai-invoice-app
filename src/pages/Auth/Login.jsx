@@ -112,8 +112,11 @@ const Login = () => {
 
           // Redirect based on role
           setTimeout(() => {
-            window.location.href = "/dashboard";
+            navigate("/dashboard");
           }, 2000);
+          //   setTimeout(() => {
+          //   window.location.href = "/dashboard";
+          // }, 2000);
         }
       } else {
         setError(response.data.message || "Invalid credentials");
