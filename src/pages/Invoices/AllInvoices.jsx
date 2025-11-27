@@ -127,13 +127,74 @@ const AllInvoices = () => {
                   <option value="Unpaid">Unpaid</option>
                 </select>
               </div>
-
             </div>
-
           </div>
 
+        {filteredInvoices.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <FileText className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No invoices found</h3>
+              <p className="text slate-500 mb-6 max-w-md">Your search or filter criteria did not match any invoices. Try adjusting your search.</p>
+              {invoices.length === 0 && (
+                <Button onClick={() => navigate('/invoices/new')} icon={Plus}> Create First Invoice</Button>
+              )}
+        </div>
+        ) : (
+          <div className="w-[90vw] md:w-auto overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Invoice #</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Client</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Due Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
 
+              <tbody className="bg-white divide-y divide-slate-200">
+                {filteredInvoices.map(invoice => (
+                  <tr key={invoice._id} className="hover:bg-slate-50">
+                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 cursor-pointer">{invoice.invoiceNumber}</td>
+                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="">{invoice.billTo.clientName}</td>
+                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="">${invoice.total.toFixed(2)}</td>
+                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="">{moment(invoice.dueDate).format('MMM D, YYYY')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      invoice.status === 'Paid' ? 'bg-emerald-100 text-emerald-800' :
+                      invoice.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
+                      'bg-red-100 text-red-800' 
+                    }`}>
+                      {invoice.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        onClick={() => handleStatusChange(invoice)}
+                        isLoading={statusChangeLoading === invoice._id}
+                      >
+                        {invoice.status === 'Paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                        </Button>
+                        <Button size="small" variant="ghost" onClick={() => navigate(`/invoices/${invoice._id}`)}><Edit className="w-4 h-4"/></Button>
+                        <Button size="small" variant="ghost" onClick={() => handleDelete(invoice._id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                        {invoice.status !== 'Paid' && (
+                          <Button size="small" variant="ghost" onClick={() => handleOpenReminderModal(invoice._id)} title="Generate Reminder"><Mail className="w-4 h-4 text-blue-500" /></Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
 
+            </table>
+          </div>
+            )}
           </div>
       </div>
   )
