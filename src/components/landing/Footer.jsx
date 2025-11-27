@@ -32,7 +32,7 @@ const Footer = () => {
                         {/* <div className="w-8 h-8 bg-blue-950 rounded-md flex items-center justify-center">
                             
                             </div> */}
-                            <span className="text-xl font-bold">AI Invoice App</span>
+                            <span className="text-xl font-bold">Quantum Invoice</span>
                             </Link>
                             <p className="text-gray-400 leading-relaxed max-w-sm">
                                 The simplest way to create and send professional invoices.

@@ -229,7 +229,7 @@ const SignUp = () => {
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">
             Create Account
           </h1>
-          <p className="text-gray-600 text-sm">Join Invoice Generator today</p>
+          <p className="text-gray-600 text-sm">Join Quantum Invoice today</p>
         </div>
 
         {/* Form */}

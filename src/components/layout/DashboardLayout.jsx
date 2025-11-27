@@ -100,7 +100,7 @@ const DashboardLayout = ({ children, activeMenu }) => {
             </div>
             {!sidebarCollapsed && (
               <span className="text-gray-900 font-bold text-xl">
-                AI Invoice App
+                Quantum Invoice
               </span>
             )}
           </Link>
