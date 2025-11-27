@@ -1,4 +1,4 @@
-export const BASE_URL = "http://localhost:8000";
+export const BASE_URL = "http://172.20.20.20:8000";
 
 export const API_PATHS = {
   AUTH: {
