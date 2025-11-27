@@ -111,12 +111,12 @@ const Login = () => {
           login(response.data, token);
 
           // Redirect based on role
-          // setTimeout(() => {
-          //   navigate("/dashboard");
-          // }, 2000);
-            setTimeout(() => {
-            window.location.href = "/dashboard";
+          setTimeout(() => {
+            navigate("/dashboard");
           }, 2000);
+          //   setTimeout(() => {
+          //   window.location.href = "/dashboard";
+          // }, 2000);
         }
       } else {
         setError(response.data.message || "Invalid credentials");
