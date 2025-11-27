@@ -21,6 +21,19 @@ CORS error on mobile Safari: XMLHttpRequest cannot load http://localhost:8000/ap
     - Routing race condition: Using window.location.href instead of React Router's navigate()
     Fix: 
     - Changed from window.location.href = "/dashboard" to navigate("/dashboard") in Login.jsx
+
+AllInvoices.jsx line 26: Fixed responses.data → response.data typo
+
+
+Added ngrok URL to allowedOrigins array
+Fixed CORS origin header setting syntax
+Added ngrok-skip-browser-warning to allowed headers
+
+axiosInstance.js: Added ngrok-skip-browser-warning: true header
+axiosInstance.js: Changed withCredentials: false
+AllInvoices.jsx: Added array validation before calling .sort()
+Dashboard.jsx: Added array validation before calling .filter()
+apiPaths.js: Updated BASE_URL to use ngrok URL
 ```
 
 

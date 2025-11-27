@@ -26,6 +26,14 @@ const Dashboard = () => {
           API_PATHS.INVOICE.GET_ALL_INVOICES
         );
         const invoices = response.data;
+        console.log("Dashboard invoices fetched:", invoices);
+
+        if (!Array.isArray(invoices)) {
+          console.error("Expected array but got:", invoices);
+          setStats({ totalInvoices: 0, totalPaid: 0, totalUnpaid: 0 });
+          setRecentInvoices([]);
+          return;
+        }
 
         const totalInvoices = invoices.length;
         const totalPaid = invoices

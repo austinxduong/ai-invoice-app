@@ -22,10 +22,16 @@ const AllInvoices = () => {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const response = await axiosInstance.get(API_PATHS.INVOICE.GET_ALL_INVOICES);
-        setInvoices(responses.data.sort((a,b) => new Date(b.invoice.Date) - new Date(a.invoiceDate)
-          )
-        );
+      const response = await axiosInstance.get(API_PATHS.INVOICE.GET_ALL_INVOICES);
+      console.log("Invoices fetched:", response.data);
+
+      // Check if response.data is an array (success) or error object
+      if (Array.isArray(response.data)) {
+          setInvoices(response.data.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate)));
+      } else {
+          console.error("Expected array but got:", response.data);
+          setInvoices([]); // Set empty array as fallback
+      }
       } catch (err) {
         setError('Failed to fetch invoices.');
         console.error(err)
