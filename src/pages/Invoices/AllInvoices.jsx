@@ -46,6 +46,15 @@ const AllInvoices = () => {
   }, []);
 
   const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this invoice?')) {
+      try {
+        await axiosInstance.delete(API_PATHS.INVOICE.DELETE_INVOICES(id));
+        setInvoices(invoices.filter(invoice => invoice._id !== id));
+      } catch (err) {
+        setError('Failed to delete invoice.');
+        console.error(err);
+      }
+    }
 
   };
 
@@ -159,9 +168,9 @@ const AllInvoices = () => {
                 {filteredInvoices.map(invoice => (
                   <tr key={invoice._id} className="hover:bg-slate-50">
                     <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 cursor-pointer">{invoice.invoiceNumber}</td>
-                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="">{invoice.billTo.clientName}</td>
-                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="">${invoice.total.toFixed(2)}</td>
-                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="">{moment(invoice.dueDate).format('MMM D, YYYY')}</td>
+                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 cursor-pointer">{invoice.billTo.clientName}</td>
+                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 cursor-pointer">${invoice.total.toFixed(2)}</td>
+                    <td onClick={() => navigate(`/invoices/${invoice._id}`)} className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 cursor-pointer">{moment(invoice.dueDate).format('MMM D, YYYY')}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       invoice.status === 'Paid' ? 'bg-emerald-100 text-emerald-800' :
