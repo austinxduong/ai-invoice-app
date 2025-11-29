@@ -43,10 +43,32 @@ remote login - "error occurred during login"
     (backend)
     - commit:'testing0'
     - enhanced cors origin detection logic for ngrok tunneling/requests
-        -  Some ngrok requests arrived at the backend without an origin header
+        - Some ngrok requests arrived at the backend without an origin header
         - Original fallback logic set CORS origin to localhost:5173 for requests with no origin
         - Remote users accessing through ngrok got incorrect CORS headers
         - Resulted in CORS policy violations for legitimate ngrok requests
+
+        (before):
+        Request: ngrok tunnel (no origin) → Backend → CORS: localhost:5173 ❌
+        Result: "Access-Control-Allow-Origin header not present" error
+
+        (after):
+        Request: ngrok tunnel (no origin) → Backend → Detect ngrok → CORS: ngrok URL ✅
+        Request: local browser (no origin) → Backend → Detect local → CORS: localhost ✅
+
+        ngrok Header Behavior:
+        Preflight OPTIONS requests often arrive without origin header
+        ngrok preserves original request info in x-forwarded-host header
+        Standard CORS logic only checks origin header (misses forwarded info)
+
+        (remote access pattern):
+        Remote User → Browser → ngrok tunnel → Backend
+            ↓
+        Headers: {
+            'x-forwarded-host': 'abc123.ngrok-free.dev',
+            'host': 'abc123.ngrok-free.dev',
+            'origin': undefined  // ← Missing!
+        }
 ```
 
 
