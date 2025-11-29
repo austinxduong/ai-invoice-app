@@ -9,7 +9,7 @@ const axiosInstance = axios.create({
     'ngrok-skip-browser-warning': 'true',
     Accept: "application/json",
   },
-  withCredentials: false,
+  withCredentials: true,
 });
 
 axiosInstance.interceptors.request.use(

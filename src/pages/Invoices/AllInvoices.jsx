@@ -59,7 +59,7 @@ const AllInvoices = () => {
   };
 
   const handleStatusChange = async (invoice) => {
-
+    
   };
 
   const handleOpenReminderModal = (invoiceId) => {

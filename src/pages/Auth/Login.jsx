@@ -122,6 +122,17 @@ const Login = () => {
         setError(response.data.message || "Invalid credentials");
       }
     } catch (err) {
+          console.error('Login error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: {
+            url: err.config?.url,
+            method: err.config?.method,
+            baseURL: err.config?.baseURL
+        }
+    });
+    
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
       } else {
