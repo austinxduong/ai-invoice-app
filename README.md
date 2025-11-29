@@ -34,6 +34,19 @@ axiosInstance.js: Changed withCredentials: false
 AllInvoices.jsx: Added array validation before calling .sort()
 Dashboard.jsx: Added array validation before calling .filter()
 apiPaths.js: Updated BASE_URL to use ngrok URL
+
+remote login - "error occurred during login"
+    (frontend)
+    - add leading forward slash: GET_PROFILE: "/api/auth/me",
+    - update boolean from false: withCredentials: true
+
+    (backend)
+    - commit:'testing0'
+    - enhanced cors origin detection logic for ngrok tunneling/requests
+        -  Some ngrok requests arrived at the backend without an origin header
+        - Original fallback logic set CORS origin to localhost:5173 for requests with no origin
+        - Remote users accessing through ngrok got incorrect CORS headers
+        - Resulted in CORS policy violations for legitimate ngrok requests
 ```
 
 
