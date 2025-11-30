@@ -59,7 +59,21 @@ const AllInvoices = () => {
   };
 
   const handleStatusChange = async (invoice) => {
-    
+    setStatusChangeLoading(invoice._id);
+    try{
+      const newStatus = invoice.status === 'Paid' ? 'Unpaid' : 'Paid';
+      const updatedInvoice = { ...invoice, status: newStatus};
+
+      const response = await axiosInstance.put(API_PATHS.INVOICE.UPDATE_INVOICE(invoice._id), updatedInvoice);
+
+      setInvoices(invoices.map(inv => inv._id === invoice._id ? response.data : inv));
+    } catch (err) {
+      setError('Failed to update invoice status.');
+      console.error(err);
+    } finally {
+      setStatusChangeLoading(null)
+    }
+
   };
 
   const handleOpenReminderModal = (invoiceId) => {
