@@ -91,7 +91,8 @@ const AllInvoices = () => {
   }, [invoices, searchTerm, statusFilter]);
 
   if (loading) {
-    return <div className="flex justify-center itw-8 h-8 animate-spin text-blue-600"><Loader2 className="" /></div>
+    return <div className="flex justify-center items-center h-96">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
   }
 
   return (
