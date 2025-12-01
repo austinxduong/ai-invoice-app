@@ -16,8 +16,13 @@ export const AuthProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
+        console.log('🔐 AUTH STATE CHANGED:', {
+            isAuthenticated,
+            loading,
+            user: user?.email || 'null'
+        })
         checkAuthStatus();
-    }, []);
+    }, [isAuthenticated, loading, user]);
 
     const checkAuthStatus = () => {
         try {
