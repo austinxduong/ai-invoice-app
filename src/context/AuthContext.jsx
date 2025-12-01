@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
             loading,
             user: user?.email || 'null'
         })
-        checkAuthStatus();
     }, [isAuthenticated, loading, user]);
 
     const checkAuthStatus = () => {
