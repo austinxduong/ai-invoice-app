@@ -20,7 +20,10 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const checkAuthStatus = () => {
-        try {
+        setLoading(true)
+
+        setTimeout(() => {
+                    try {
             const token = localStorage.getItem('token');
             const userStr = localStorage.getItem('user');
 
@@ -40,6 +43,8 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
+
+        },0);
     };
 
     const login = (userData, token) => {
