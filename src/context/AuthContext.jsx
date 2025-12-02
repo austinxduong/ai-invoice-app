@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(true)
 
         setTimeout(() => {
-                    try {
+        try {
             const token = localStorage.getItem('token');
             const userStr = localStorage.getItem('user');
 
