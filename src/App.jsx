@@ -75,7 +75,7 @@ console.log('🚨 APP COMPONENT LOADING')
   );
 }; */}
          
-        <Route element={
+        {/* <Route element={
         <ProtectedRoute />}>
           <Route path="/invoices/new" element={<CreateInvoice />} />
           <Route path="/invoices/:id" element={<InvoiceDetail />} />
@@ -83,6 +83,16 @@ console.log('🚨 APP COMPONENT LOADING')
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
+        </Routes>
+      </Router> */}
+
+      
+        
+          <Route path="/invoices/new" element={<ProtectedRoute><CreateInvoice /></ProtectedRoute>} />
+          <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} />
+          <Route path="/invoices" element={<ProtectedRoute><AllInvoices /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         </Routes>
       </Router>
 
