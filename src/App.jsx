@@ -32,11 +32,11 @@ console.log('🚨 APP COMPONENT LOADING')
 
          
         <Route element={<ProtectedRoute /> }>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="invoices" element={<AllInvoices />} />
-          <Route path="invoices/new" element={<CreateInvoice />} />
-          <Route path="invoices/:id" element={<InvoiceDetail />} />
-          <Route path="profile" element={<ProfilePage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/invoices" element={<AllInvoices />} />
+          <Route path="/invoices/new" element={<CreateInvoice />} />
+          <Route path="/invoices/:id" element={<InvoiceDetail />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
           {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
