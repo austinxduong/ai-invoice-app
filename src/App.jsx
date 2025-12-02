@@ -76,41 +76,12 @@ console.log('🚨 APP COMPONENT LOADING')
 }; */}
          
         <Route element={
-          <div>
-            {console.log('🗺️ ProtectedRoute wrapper being evaluated')}
-            <ProtectedRoute /> 
-          </div>
-          }>
-          <Route path="/dashboard" element={
-            <div>
-            {console.log('🗺️ Dashboard route matched!')}
-            <Dashboard />
-            </div>
-          } />
-          <Route path="/invoices" element={
-            <div>
-            {console.log('🗺️ Invoices route matched!')}
-            <AllInvoices />
-            </div>
-            } />
-          <Route path="/invoices/new" element={
-            <div>
-            {console.log('🗺️ Create Invoice route matched!')}
-              <CreateInvoice />
-            </div>
-            } />
-          <Route path="/invoices/:id" element={
-            <div>
-            {console.log('🗺️ Invoice detail route matched!')}
-              <InvoiceDetail />
-            </div>
-            } />
-          <Route path="/profile" element={
-            <div>
-            {console.log('🗺️ Profile route matched!')}
-              <ProfilePage />
-            </div>
-            } />
+        <ProtectedRoute />}>
+          <Route path="/invoices/new" element={<CreateInvoice />} />
+          <Route path="/invoices/:id" element={<InvoiceDetail />} />
+          <Route path="/invoices" element={<AllInvoices />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
         </Routes>
       </Router>
