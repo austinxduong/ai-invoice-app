@@ -7,6 +7,12 @@ const { isAuthenticated, loading } = useAuth();
 
 console.log('Protected Route Check:', {isAuthenticated, loading});
 
+console.log('🛡️ ProtectedRoute check:', {
+  isAuthenticated,
+  loading,
+  currentPath:window.location.pathname
+})
+
 
     if (loading) {
       console.log('🛡️ SHOWING LOADING STATE')

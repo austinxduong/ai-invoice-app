@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const checkAuthStatus = () => {
+        console.log('🔍 [TIMING] Auth check starting...')
         setLoading(true)
         setTimeout(() => {
             try {
@@ -30,9 +31,9 @@ export const AuthProvider = ({ children }) => {
                     const userData = JSON.parse(userStr);
                     setUser(userData);
                     setIsAuthenticated(true)
-                    console.log('User authenticated:', userData.email || userData.firstName);
+                    console.log('✅ [TIMING] User authenticated:', userData.email || userData.firstName);
                 } else {
-                    console.log('No token/user found, setting as unauthenticated')
+                    console.log('❌ [TIMING] No token/user found, setting as unauthenticated')
                     setUser(null)
                     setIsAuthenticated(false)
                 }
@@ -41,6 +42,7 @@ export const AuthProvider = ({ children }) => {
                 logout();
             } finally {
                 setLoading(false);
+                console.log('🔍 [TIMING] Auth check completed - loading set to false')
             }
         },0)
 
