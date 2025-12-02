@@ -51,6 +51,9 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
+        console.log('🚨 LOGOUT FUNCTION CALLED!')
+        console.trace('Logout called from')
+
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
