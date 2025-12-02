@@ -113,7 +113,6 @@ const Login = () => {
           // Redirect based on role
           setTimeout(() => {
             if(window.location.pathname === '/login' || window.location.pathname === '/') {
-              navigate("/dashboard");
             } 
           }, 2000);
           //   setTimeout(() => {
