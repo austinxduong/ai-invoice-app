@@ -27,19 +27,61 @@ console.log('🚨 APP COMPONENT LOADING')
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
 
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/invoices" element ={
+          <ProtectedRoute>
+            < AllInvoices />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/invoices/new" element={
+          <ProtectedRoute>
+            <CreateInvoice />
+          </ProtectedRoute>
+        } />
+
+        <Route path="invoices/:id" element={
+          <ProtectedRoute>
+            <InvoiceDetail />
+          </ProtectedRoute>
+        } />
+
+        </Routes>
+      </Router>
+
+      <Toaster
+        toastOptions={{
+          className: "",
+          style: {
+            fontSize: "13px",
+          },
+        }}
+      />
+    </AuthProvider>
+  );
+};
          
-        <Route element={<ProtectedRoute /> }>
+        {/* <Route element={<ProtectedRoute /> }>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/invoices" element={<AllInvoices />} />
           <Route path="/invoices/new" element={<CreateInvoice />} />
           <Route path="/invoices/:id" element={<InvoiceDetail />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
-
-          {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
         </Routes>
       </Router>
 
@@ -53,6 +95,6 @@ console.log('🚨 APP COMPONENT LOADING')
       />
     </AuthProvider>
   )
-}
+} */}
 
 export default App
