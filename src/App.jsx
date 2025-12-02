@@ -30,7 +30,7 @@ console.log('🚨 APP COMPONENT LOADING')
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           
-        <Route path="/dashboard" element={
+        {/* <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
@@ -73,14 +73,39 @@ console.log('🚨 APP COMPONENT LOADING')
       />
     </AuthProvider>
   );
-};
+}; */}
          
-        {/* <Route element={<ProtectedRoute /> }>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/invoices" element={<AllInvoices />} />
-          <Route path="/invoices/new" element={<CreateInvoice />} />
-          <Route path="/invoices/:id" element={<InvoiceDetail />} />
-          <Route path="/profile" element={<ProfilePage />} />
+        <Route element={<ProtectedRoute /> }>
+          <Route path="/dashboard" element={
+            <div>
+            {console.log('🗺️ Dashboard route matched!')}
+            <Dashboard />
+            </div>
+          } />
+          <Route path="/invoices" element={
+            <div>
+            {console.log('🗺️ Invoices route matched!')}
+            <AllInvoices />
+            </div>
+            } />
+          <Route path="/invoices/new" element={
+            <div>
+            {console.log('🗺️ Create Invoice route matched!')}
+              <CreateInvoice />
+            </div>
+            } />
+          <Route path="/invoices/:id" element={
+            <div>
+            {console.log('🗺️ Invoice detail route matched!')}
+              <InvoiceDetail />
+            </div>
+            } />
+          <Route path="/profile" element={
+            <div>
+            {console.log('🗺️ Profile route matched!')}
+              <ProfilePage />
+            </div>
+            } />
         </Route>
         </Routes>
       </Router>
@@ -95,6 +120,6 @@ console.log('🚨 APP COMPONENT LOADING')
       />
     </AuthProvider>
   )
-} */}
+}
 
 export default App
