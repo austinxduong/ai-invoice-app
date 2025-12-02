@@ -21,27 +21,29 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuthStatus = () => {
         setLoading(true)
+        setTimeout(() => {
+            try {
+                const token = localStorage.getItem('token');
+                const userStr = localStorage.getItem('user');
 
-        try {
-            const token = localStorage.getItem('token');
-            const userStr = localStorage.getItem('user');
-
-            if (token && userStr) {
-                const userData = JSON.parse(userStr);
-                setUser(userData);
-                setIsAuthenticated(true)
-                console.log('User authenticated:', userData.email || userData.firstName);
-            } else {
-                console.log('No token/user found, setting as unauthenticated')
-                setUser(null)
-                setIsAuthenticated(false)
+                if (token && userStr) {
+                    const userData = JSON.parse(userStr);
+                    setUser(userData);
+                    setIsAuthenticated(true)
+                    console.log('User authenticated:', userData.email || userData.firstName);
+                } else {
+                    console.log('No token/user found, setting as unauthenticated')
+                    setUser(null)
+                    setIsAuthenticated(false)
+                }
+            } catch (error) {
+                console.error('Auth check failed', error);
+                logout();
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error('Auth check failed', error);
-            logout();
-        } finally {
-            setLoading(false);
-        }
+        },0)
+
     };
 
     const login = (userData, token) => {
