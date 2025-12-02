@@ -75,7 +75,12 @@ console.log('🚨 APP COMPONENT LOADING')
   );
 }; */}
          
-        <Route element={<ProtectedRoute /> }>
+        <Route element={
+          <div>
+            {console.log('🗺️ ProtectedRoute wrapper being evaluated')}
+            <ProtectedRoute /> 
+          </div>
+          }>
           <Route path="/dashboard" element={
             <div>
             {console.log('🗺️ Dashboard route matched!')}
