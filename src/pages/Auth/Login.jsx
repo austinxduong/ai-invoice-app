@@ -112,7 +112,9 @@ const Login = () => {
 
           // Redirect based on role
           setTimeout(() => {
-            navigate("/dashboard");
+            if(window.location.pathname === '/login' || window.location.pathname === '/') {
+              navigate("/dashboard");
+            } 
           }, 2000);
           //   setTimeout(() => {
           //   window.location.href = "/dashboard";
@@ -132,7 +134,7 @@ const Login = () => {
             baseURL: err.config?.baseURL
         }
     });
-    
+
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
       } else {
