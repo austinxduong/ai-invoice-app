@@ -14,6 +14,25 @@ const [isLoading, setIsLoading] = useState(false);
 const navigate = useNavigate();
 
 const handleGenerate = async () => {
+    if (!text.trim()) {
+        toast.error('Please paste some text to generate an invoice');
+        return;
+    }
+    setIsLoading(true);
+    try{
+        const response = await axiosInstance.post(API_PATHS.AI.PARSE_INVOICE_TEXT, {text});
+        const invoiceData = response.data;
+
+        toast.success('Invoice data extracted successuflly!');
+        onClose();
+
+        navigate('/invoices/new', { state : { aiData: invoiceData} })
+    } catch (error) {
+        toast.error('Failed to generate invoice from text');
+        console.error('AI parsing error:', error);
+    } finally {
+        setIsLoading(false)
+    }
 
 };
 
