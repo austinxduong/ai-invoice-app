@@ -42,8 +42,6 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-
-   
     };
 
     const login = (userData, token) => {

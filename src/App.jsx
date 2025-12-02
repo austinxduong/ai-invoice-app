@@ -19,17 +19,7 @@ import { AuthProvider } from "./context/AuthContext";
 
 const App = () => {
 
-  const location = useLocation();
-  const {isAuthenticated, loading, user} = useAuth();
-
-  useEffect(() => {
-    console.log('📱 APP ROUTE CHANGE:', {
-      pathname:location.pathname,
-      isAuthenticated,
-      loading,
-      userEmail: user?.email
-    })
-  }, [location.pathname, isAuthenticated, loading, user]);
+console.log('🚨 APP COMPONENT LOADING')
 
 
   return (
