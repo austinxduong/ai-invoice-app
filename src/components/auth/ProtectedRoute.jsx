@@ -25,7 +25,7 @@ console.log('🛡️ ProtectedRoute check:', {
     if (!isAuthenticated) {
       console.log('🛡️ User not authenticated, redirecting to login');
       console.log('🛡️ Current location before redirect:', window.location.pathname);
-        // return <Navigate to="/login" replace />;
+        return <Navigate to="/login" replace />;
     }
 
   console.log("🛡️User authenticated, rendering protected content");
