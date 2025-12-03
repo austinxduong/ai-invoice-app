@@ -124,7 +124,7 @@ export const cannabisHelpers = {
     },
 
     // format pricing for display
-    formPricing:(pricing) => {
+    formatPricing:(pricing) => {
         if(!pricing || pricing.length === 0) return 'Price not available';
         const firstPrice = pricing[0];
         return `$${firstPrice.price.toFixed(2)} per ${firstPrice.unit}`;
