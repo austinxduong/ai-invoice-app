@@ -87,12 +87,16 @@ console.log('🚨 APP COMPONENT LOADING')
       </Router> */}
 
       
-        
+          {/* Protected Routes */}
           <Route path="/invoices/new" element={<ProtectedRoute><CreateInvoice /></ProtectedRoute>} />
           <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} />
           <Route path="/invoices" element={<ProtectedRoute><AllInvoices /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+
+          {/* POS Routes */}
+          {/* <Route path="/products" element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} /> */}
+
         </Routes>
       </Router>
 
