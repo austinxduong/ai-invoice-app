@@ -44,7 +44,7 @@ const fetchProducts = async () => {
         const response = await productApi.getProducts(apiFilters);
         setProducts(response.products || []);
     } catch (error) {
-        console.error('Error fetching products', err);
+        console.error('Error fetching products', error);
         setError('Failed to load products. Please try again.')
     } finally {
         setLoading(false)
@@ -62,10 +62,14 @@ const handleAddToCart = (product) => {
     }
 };
 
+const handleViewDetails = (product) => {
+    console.log('View product details:', product);
+};
+
 if (loading) {
     return (
-        <div className="flex justif-center items-center h-96">
-            <div className="text-lg gray-600">Loading cannabis products...</div>
+        <div className="flex justify-center items-center h-96">
+            <div className="text-lg text-gray-600">Loading cannabis products...</div>
         </div>
     );
 }
@@ -96,7 +100,7 @@ if (error) {
             type="text"
             placeholder="Search products..."
             value={searchTerm}
-            onChange={(e) => searchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
         />
     </div>
@@ -106,7 +110,7 @@ if (error) {
         {categories.map((category) => (
             <button
             key={category.key}
-            onClick={() => selectedCategory(category.key)}
+            onClick={() => setSelectedCategory(category.key)}
             className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
                 selectedCategory === category.key
                 ? 'bg-green-600 text-white'
@@ -141,11 +145,11 @@ if (error) {
     </div>
 
         {/* products grid */}
-    {products.legnth > 0 ? (
+    {products.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
                 <ProductCard
-                    key={product.id}
+                    key={product._id}
                     product={product}
                     onAddToCart={handleAddToCart}
                     onViewDetails={handleViewDetails}

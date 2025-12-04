@@ -25,7 +25,7 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
             {/* categeory badge */}
             <div className="absolute top-2 left-2">
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${strainColor}`}>
-                    {cannabisHelpers.getSubcategoryDisplayName(product.subcategory)}
+                    {product.subcategory}
                 </span>
             </div>
 
