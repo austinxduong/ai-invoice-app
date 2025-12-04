@@ -17,6 +17,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import ProductCatalog from "./components/POS/ProductCatalog";
 import OurTeam from "./pages/Team/OurTeam";
+import { CartProvider } from "./context/CartContext";
 
 
 const App = () => {
@@ -26,6 +27,7 @@ console.log('🚨 APP COMPONENT LOADING')
 
   return (
     <AuthProvider>
+      <CartProvider>
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -112,6 +114,7 @@ console.log('🚨 APP COMPONENT LOADING')
           },
         }}
       />
+      </CartProvider>
     </AuthProvider>
   )
 }

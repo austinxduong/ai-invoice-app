@@ -1,12 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cannabisHelpers } from '../../services/productApi';
+import { useCart } from '../../context/CartContext'; // 
 
-const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
+const ProductCard = ({ product, onViewDetails }) => { // Removed onAddToCart prop
     console.log('🧾 ProductCard received product:', product); // Debug log
+    
+    // Add these new lines:
+    const [selectedPricing, setSelectedPricing] = useState(null);
+    const { addToCart } = useCart();
     
     const inventoryStatus = cannabisHelpers.getInventoryStatus(product);
     const cannabinoids = cannabisHelpers.formatCannabinoids(product.cannabinoids);
     const strainColor = cannabisHelpers.getStrainColor(product.subcategory);
+
+    // Add this new function:
+    const handleAddToCart = () => {
+        if (!selectedPricing) {
+            alert('Please select a size/pricing option');
+            return;
+        }
+        
+        addToCart(product, selectedPricing, 1);
+        setSelectedPricing(null); // Reset selection after adding
+    };
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"> {/* FIXED: "bg white" */}
@@ -81,13 +97,35 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
 
                 {/* pricing */}
                 <div className="mb-4">
-                    <div className="text-xl font-bold text-gray-900">
-                        {cannabisHelpers.formatPricing(product.pricing)}
-                    </div>
-                    {product.pricing && product.pricing.length > 1 && (
-                        <p className="text-sm text-gray-500">
-                            +{product.pricing.length - 1} more size{product.pricing.length > 2 ? 's' : ''}
-                        </p>
+                    {product.pricing && product.pricing.length > 0 ? (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Select Size & Price
+                            </label>
+                            <select
+                                value={selectedPricing ? JSON.stringify(selectedPricing) : ''}
+                                onChange={(e) => setSelectedPricing(e.target.value ? JSON.parse(e.target.value) : null)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                            >
+                                <option value="">Choose a size...</option>
+                                {product.pricing.map((pricing, index) => (
+                                    <option key={index} value={JSON.stringify(pricing)}>
+                                        {pricing.weight}g - ${pricing.price}
+                                    </option>
+                                ))}
+                            </select>
+                            
+                            {/* Show selected price prominently */}
+                            {selectedPricing && (
+                                <div className="mt-2 text-xl font-bold text-green-600">
+                                    ${selectedPricing.price}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-xl font-bold text-gray-900">
+                            {cannabisHelpers.formatPricing(product.pricing)}
+                        </div>
                     )}
                 </div>
 
@@ -101,15 +139,20 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
                 {/* actions */}
                 <div className="flex space-x-2">
                     <button
-                        onClick={() => onAddToCart(product)}
-                        disabled={!cannabisHelpers.isInStock(product)}
+                        onClick={handleAddToCart}
+                        disabled={!cannabisHelpers.isInStock(product) || !selectedPricing}
                         className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                            cannabisHelpers.isInStock(product)
-                            ? 'bg-green-600 hover:bg-green-700 text-white' // FIXED: CSS class names
+                            cannabisHelpers.isInStock(product) && selectedPricing
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
+                    }`}
                     >
-                        {cannabisHelpers.isInStock(product) ? 'Add to Cart' : 'Out of Stock'}
+                    {!cannabisHelpers.isInStock(product) 
+                        ? 'Out of Stock' 
+                        : !selectedPricing 
+                        ? 'Select Size First' 
+                        : 'Add to Cart'
+                    }
                     </button>
                     <button
                         onClick={() => onViewDetails(product)}
