@@ -63,7 +63,7 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
 
         {/* effects */}
 
-        {product.effects && product.effects.length > ) && (
+        {product.effects && product.effects.length > 0 && (
             <div className="mb-3">
                 <div className="flex flex-wrap gap-1">
                     {product.effects.slice(0,3).map((effect,index) => {

@@ -15,6 +15,7 @@ import InvoiceDetail from "./pages/Invoices/InvoiceDetail";
 import ProfilePage from "./pages/Profile/ProfilePage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import ProductCatalog from "./components/POS/ProductCatalog";
 
 
 const App = () => {
