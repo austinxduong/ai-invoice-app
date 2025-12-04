@@ -120,7 +120,7 @@ const Header = () => {
                                 Testimonials
                             </a>
                             <a
-                                href="team"
+                                href="/team"
                                 className="block px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium transition colors duration-200"
                             >
                                 Our team
