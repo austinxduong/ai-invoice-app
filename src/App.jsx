@@ -94,9 +94,10 @@ console.log('🚨 APP COMPONENT LOADING')
           <Route path="/invoices" element={<ProtectedRoute><AllInvoices /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/products" element={<ProductCatalog onAddToCart={(product) => console.log('Add to cart')} />} />
 
           {/* POS Routes */}
-          {/* <Route path="/products" element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} /> */}
+          <Route path="/products" element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} />
 
         </Routes>
       </Router>
