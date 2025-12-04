@@ -14,7 +14,7 @@ const ProductCatalog = () => {
   const [pagination, setPagination] = useState({
     page: 1,
     totalPages: 1,
-    totalProducts: 0
+    total: 0
   });
 
   // Cannabis categories
@@ -44,9 +44,9 @@ const ProductCatalog = () => {
       
       setProducts(response.products || []);
       setPagination({
-        page: response.pagination?.page || 1,
-        totalPages: response.pagination?.totalPages || 1,
-        totalProducts: response.pagination?.totalProducts || 0
+        page: response.pagination?.current || 1,
+        totalPages: response.pagination?.pages || 1,
+        totalProducts: response.pagination?.total || 0
       });
     } catch (err) {
       console.error('Error loading products:', err);
