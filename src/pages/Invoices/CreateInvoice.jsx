@@ -6,6 +6,8 @@ import { Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast"
 import moment from "moment"
 import { useAuth } from "../../context/AuthContext"
+import { useCart } from '../../context/CartContext';
+import { calculateItemTax, formatCurrency } from '../../utils/cannabisTax';
 
 import InputField from "../../components/ui/InputField";
 import TextareaField from "../../components/ui/TextareaField";
@@ -14,10 +16,13 @@ import Button from "../../components/ui/Button";
 
 
 
+
+
 const CreateInvoice = ({existingInvoice, onSave}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { clearCart } = useCart();
 
   const [formData, setFormData] = useState(
     existingInvoice || {
@@ -41,57 +46,97 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
     !existingInvoice
   );
 
-  useEffect(() => {
-    const aiData = location.state?.aiData;
+useEffect(() => {
+  const aiData = location.state?.aiData;
+  const cartItems = location.state?.cartItems; // ADD THIS LINE
 
-    if (aiData) {
-      setFormData((prev) => ({
-        ...prev,
-        billTo: {
-          clientName: aiData.clientName || "",
-          email: aiData.email || "",
-          address: aiData.address || "",
-          phone: "",
-        },
-        items: aiData.items || [
-          { name: "", quantity: 1, unitPrice: 0, taxPercent: 0 },
-        ],
-      }));
-    }
+  // Handle AI data (existing functionality)
+  if (aiData) {
+    setFormData((prev) => ({
+      ...prev,
+      billTo: {
+        clientName: aiData.clientName || "",
+        email: aiData.email || "",
+        address: aiData.address || "",
+        phone: "",
+      },
+      items: aiData.items || [
+        { name: "", quantity: 1, unitPrice: 0, taxPercent: 0 },
+      ],
+    }));
+  }
 
-    if (existingInvoice) {
-      setFormData({
-        ...existingInvoice,
-        invoiceDate: moment(existingInvoice.invoiceDate).format("YYYY-MM-DD"),
-        dueDate: moment(existingInvoice.dueDate).format("YYYY-MM-DD"),
-      });
-    } else {
-      const generateNewInvoiceNumber = async () => {
-        setIsGeneratingNumber(true);
-        try {
-          const response = await axiosInstance.get(
-            API_PATHS.INVOICE.GET_ALL_INVOICES
-          );
-          const invoices = response.data;
-          let maxNum = 0;
-          invoices.forEach((inv) => {
-            const num = parseInt(inv.invoiceNumber.split("-")[1]);
-            if (!isNaN(num) && num > maxNum) maxNum = num;
-          });
-          const newInvoiceNumber = `INV-${String(maxNum + 1).padStart(3, "0")}`;
-          setFormData((prev) => ({ ...prev, invoiceNumber: newInvoiceNumber }));
-        } catch (error) {
-          console.error("Failed to generate invoice number", error);
-          setFormData((prev) => ({
-            ...prev,
-            invoiceNumber: `INV-${Date.now().toString().slice(-5)}`,
-          }));
-        }
-        setIsGeneratingNumber(false);
+  // 🛒 ADD THIS ENTIRE CART INTEGRATION SECTION:
+  if (cartItems && cartItems.length > 0) {
+    console.log('📦 Creating invoice from cart items:', cartItems);
+    
+    // Convert cart items to invoice items
+    const invoiceItems = cartItems.map(cartItem => {
+      const itemTax = calculateItemTax(cartItem);
+      
+      // Calculate effective tax percentage for your existing system
+      const effectiveTaxPercent = cartItem.pricingOption?.price > 0 
+        ? (itemTax.taxes.total / (cartItem.pricingOption.price * cartItem.quantity)) * 100 
+        : 0;
+      
+      return {
+        name: `${cartItem.name} (${cartItem.pricingOption?.weight}g)`,
+        quantity: cartItem.quantity,
+        unitPrice: cartItem.pricingOption?.price || 0,
+        taxPercent: effectiveTaxPercent,
+        // Additional metadata (optional)
+        sku: cartItem.sku,
+        batchNumber: cartItem.cannabis?.batchNumber,
+        thc: cartItem.cannabis?.thc,
+        cbd: cartItem.cannabis?.cbd,
       };
-      generateNewInvoiceNumber();
-    }
-  }, [existingInvoice]);
+    });
+
+    // Update form data with cart items
+    setFormData((prev) => ({
+      ...prev,
+      items: invoiceItems,
+      notes: prev.notes + '\n\nInvoice created from cart checkout. Tax calculation includes applicable cannabis excise and sales taxes as per local regulations.'
+    }));
+
+    // Show success message
+    toast.success(`Invoice populated with ${cartItems.length} items from cart!`);
+  }
+
+  // Existing invoice logic (unchanged)
+  if (existingInvoice) {
+    setFormData({
+      ...existingInvoice,
+      invoiceDate: moment(existingInvoice.invoiceDate).format("YYYY-MM-DD"),
+      dueDate: moment(existingInvoice.dueDate).format("YYYY-MM-DD"),
+    });
+  } else {
+    const generateNewInvoiceNumber = async () => {
+      setIsGeneratingNumber(true);
+      try {
+        const response = await axiosInstance.get(
+          API_PATHS.INVOICE.GET_ALL_INVOICES
+        );
+        const invoices = response.data;
+        let maxNum = 0;
+        invoices.forEach((inv) => {
+          const num = parseInt(inv.invoiceNumber.split("-")[1]);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        });
+        const newInvoiceNumber = `INV-${String(maxNum + 1).padStart(3, "0")}`;
+        setFormData((prev) => ({ ...prev, invoiceNumber: newInvoiceNumber }));
+      } catch (error) {
+        console.error("Failed to generate invoice number", error);
+        setFormData((prev) => ({
+          ...prev,
+          invoiceNumber: `INV-${Date.now().toString().slice(-5)}`,
+        }));
+      }
+      setIsGeneratingNumber(false);
+    };
+    generateNewInvoiceNumber();
+  }
+}, [existingInvoice, location.state]);
 
   const handleInputChange = (event, billFromBillToKey, index) => {
     const { name, value } = event.target;
@@ -152,11 +197,19 @@ const CreateInvoice = ({existingInvoice, onSave}) => {
       try {
         await axiosInstance.post(API_PATHS.INVOICE.CREATE, finalFormData);
         toast.success("Invoice created successfully!");
+        
+        // 🛒 ADD THIS CART CLEARING LOGIC:
+        if (location.state?.cartItems) {
+          clearCart();
+          console.log('🛒 Cart cleared after successful invoice creation');
+        }
+        
         navigate("/invoices");
       } catch (error) {
         toast.error("Failed to create invoice.");
         console.error(error);
       }
+
     }
     setLoading(false);
   };

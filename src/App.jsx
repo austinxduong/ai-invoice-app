@@ -18,6 +18,8 @@ import { AuthProvider } from "./context/AuthContext";
 import ProductCatalog from "./components/POS/ProductCatalog";
 import OurTeam from "./pages/Team/OurTeam";
 import { CartProvider } from "./context/CartContext";
+import Header from "./components/Header";
+import CartModal from "./components/cart/CartModal";
 
 
 const App = () => {
@@ -28,67 +30,15 @@ console.log('🚨 APP COMPONENT LOADING')
   return (
     <AuthProvider>
       <CartProvider>
+        <Header /> 
+        
+
       <Router>
+        <CartModal />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          
-        {/* <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/invoices" element ={
-          <ProtectedRoute>
-            < AllInvoices />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/invoices/new" element={
-          <ProtectedRoute>
-            <CreateInvoice />
-          </ProtectedRoute>
-        } />
-
-        <Route path="invoices/:id" element={
-          <ProtectedRoute>
-            <InvoiceDetail />
-          </ProtectedRoute>
-        } />
-
-        </Routes>
-      </Router>
-
-      <Toaster
-        toastOptions={{
-          className: "",
-          style: {
-            fontSize: "13px",
-          },
-        }}
-      />
-    </AuthProvider>
-  );
-}; */}
-         
-        {/* <Route element={
-        <ProtectedRoute />}>
-          <Route path="/invoices/new" element={<CreateInvoice />} />
-          <Route path="/invoices/:id" element={<InvoiceDetail />} />
-          <Route path="/invoices" element={<AllInvoices />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/profile" element={<ProfilePage />} />
-        </Route>
-        </Routes>
-      </Router> */}
 
       
           {/* Protected Routes */}

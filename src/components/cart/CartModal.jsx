@@ -18,7 +18,7 @@ const CartModal = () => {
     if (items.length === 0) return;
     
     // Navigate to invoice creation with cart items
-    navigate('/invoices/create', { 
+    navigate('/invoices/new', { 
       state: { 
         cartItems: items,
         taxCalculation 
@@ -30,13 +30,13 @@ const CartModal = () => {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={toggleModal}
-      />
-      
-      {/* Modal */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl transform transition-transform">
+        <div 
+            className="absolute inset-0 bg-opacity-20 transition-opacity"
+            onClick={toggleModal}
+        />
+
+        {/* Modal */}
+        <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl transform transition-transform z-10">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
