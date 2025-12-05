@@ -53,7 +53,7 @@ const CartModal = () => {
     <div className="fixed inset-0 z-50">
       {/* 🔧 FIX: Improved backdrop for mobile */}
       <div 
-        className="absolute inset-0 bg-black bg-opacity-30 transition-opacity"
+        className="absolute inset-0 bg-opacity-30 transition-opacity"
         onClick={toggleModal}
         // Prevent backdrop scroll on mobile
         style={{ touchAction: 'none' }}
