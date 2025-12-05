@@ -2,7 +2,6 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Navigate,
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import LandingPage from "./pages/LandingPage/LandingPage";
@@ -14,59 +13,159 @@ import CreateInvoice from "./pages/Invoices/CreateInvoice";
 import InvoiceDetail from "./pages/Invoices/InvoiceDetail";
 import ProfilePage from "./pages/Profile/ProfilePage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import DashboardLayout from "./components/layout/DashboardLayout";
 import { AuthProvider } from "./context/AuthContext";
 import ProductCatalog from "./components/POS/ProductCatalog";
 import OurTeam from "./pages/Team/OurTeam";
 import { CartProvider } from "./context/CartContext";
-import Header from "./components/Header";
 import CartModal from "./components/cart/CartModal";
 
-
 const App = () => {
-
-console.log('🚨 APP COMPONENT LOADING')
-
+  console.log('🚨 APP COMPONENT LOADING');
 
   return (
     <AuthProvider>
       <CartProvider>
-        <Header /> 
-        
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/team" element={<OurTeam />} />
 
-      <Router>
-        <CartModal />
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
+            {/* 🧪 TEST: Try Dashboard without DashboardLayout first */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* 🧪 TEST: Products with DashboardLayout */}
+            <Route path="/products" element={
+              <ProtectedRoute>
+                  <ProductCatalog />
+              </ProtectedRoute>
+            } />
+            
+            {/* 🧪 TEST: Other routes without layout first */}
+            <Route path="/invoices" element={
+              <ProtectedRoute>
+                <AllInvoices />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/invoices/new" element={
+              <ProtectedRoute>
+                <CreateInvoice />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/invoices/:id" element={
+              <ProtectedRoute>
+                <InvoiceDetail />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
+          </Routes>
 
-      
-          {/* Protected Routes */}
-          <Route path="/invoices/new" element={<ProtectedRoute><CreateInvoice /></ProtectedRoute>} />
-          <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} />
-          <Route path="/invoices" element={<ProtectedRoute><AllInvoices /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/products" element={<ProductCatalog onAddToCart={(product) => console.log('Add to cart')} />} />
-          <Route path="/team" element={<OurTeam />} />
+          <CartModal />
+        </Router>
 
-          {/* POS Routes */}
-          <Route path="/products" element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} />
-
-        </Routes>
-      </Router>
-
-      <Toaster
-        toastOptions={{
-          className: "",
-          style: {
-            fontSize: "13px",
-          },
-        }}
-      />
+        <Toaster
+          toastOptions={{
+            className: "",
+            style: {
+              fontSize: "13px",
+            },
+          }}
+        />
       </CartProvider>
     </AuthProvider>
-  )
-}
+  );
+};
 
-export default App
+export default App;
+
+
+
+
+
+
+// import {
+//   BrowserRouter as Router,
+//   Routes,
+//   Route,
+//   Navigate,
+// } from "react-router-dom";
+// import { Toaster } from "react-hot-toast";
+// import LandingPage from "./pages/LandingPage/LandingPage";
+// import SignUp from "./pages/Auth/SignUp";
+// import Login from "./pages/Auth/Login";
+// import Dashboard from "./pages/Dashboard/Dashboard";
+// import AllInvoices from "./pages/Invoices/AllInvoices";
+// import CreateInvoice from "./pages/Invoices/CreateInvoice";
+// import InvoiceDetail from "./pages/Invoices/InvoiceDetail";
+// import ProfilePage from "./pages/Profile/ProfilePage";
+// import ProtectedRoute from "./components/auth/ProtectedRoute";
+// import { AuthProvider } from "./context/AuthContext";
+// import ProductCatalog from "./components/POS/ProductCatalog";
+// import OurTeam from "./pages/Team/OurTeam";
+// import { CartProvider } from "./context/CartContext";
+// import Header from "./components/Header";
+// import CartModal from "./components/cart/CartModal";
+
+
+// const App = () => {
+
+// console.log('🚨 APP COMPONENT LOADING')
+
+
+//   return (
+//     <AuthProvider>
+//       <CartProvider>
+//         {/* <Header />  */}
+        
+
+//       <Router>
+//         <CartModal />
+//         <Routes>
+//           <Route path="/" element={<LandingPage />} />
+//           <Route path="/login" element={<Login />} />
+//           <Route path="/signup" element={<SignUp />} />
+
+      
+//           {/* Protected Routes */}
+//           <Route path="/invoices/new" element={<ProtectedRoute><CreateInvoice /></ProtectedRoute>} />
+//           <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} />
+//           <Route path="/invoices" element={<ProtectedRoute><AllInvoices /></ProtectedRoute>} />
+//           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+//           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+//           <Route path="/products" element={<ProductCatalog onAddToCart={(product) => console.log('Add to cart')} />} />
+//           <Route path="/team" element={<OurTeam />} />
+
+//           {/* POS Routes */}
+//           <Route path="/products" element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} />
+
+//         </Routes>
+//       </Router>
+
+//       <Toaster
+//         toastOptions={{
+//           className: "",
+//           style: {
+//             fontSize: "13px",
+//           },
+//         }}
+//       />
+//       </CartProvider>
+//     </AuthProvider>
+//   )
+// }
+
+// export default App

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Briefcase, LogOut, Menu, X } from "lucide-react";
+import { Briefcase, LogOut, Menu, X, ShoppingCart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../context/CartContext";
 import ProfileDropdown from "./ProfileDropdown";
 import { NAVIGATION_MENU } from "../../utils/data";
 
@@ -28,6 +29,7 @@ const NavigationItem = ({ item, isActive, onClick, isCollapsed }) => {
 const DashboardLayout = ({ children, activeMenu }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { itemCount, toggleModal } = useCart();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeNavItem, setActiveNavItem] = useState(activeMenu || "dashboard");
@@ -172,6 +174,21 @@ const DashboardLayout = ({ children, activeMenu }) => {
 
           <div className="flex items-center space-x-3">
             {/* Profile dropdown */}
+              <button
+    onClick={() => {
+      console.log('🛒 Cart button clicked!');
+      toggleModal();
+    }}
+    className="relative p-2 text-gray-600 hover:text-green-600 transition-colors rounded-full hover:bg-gray-100"
+    title="Shopping Cart"
+  >
+    <ShoppingCart className="h-6 w-6" />
+    {itemCount > 0 && (
+      <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+        {itemCount > 99 ? '99+' : itemCount}
+      </span>
+    )}
+  </button>
             <ProfileDropdown
               isOpen={profileDropdownOpen}
               onToggle={(e) => {
