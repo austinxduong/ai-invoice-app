@@ -16,7 +16,6 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import { AuthProvider } from "./context/AuthContext";
 import ProductCatalog from "./components/POS/ProductCatalog";
-import OurTeam from "./pages/Team/OurTeam";
 import { CartProvider } from "./context/CartContext";
 import CartModal from "./components/cart/CartModal";
 
@@ -30,7 +29,6 @@ const App = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
-            {/* <Route path="/team" element={<OurTeam />} /> */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
 
@@ -115,7 +113,6 @@ export default App;
 // import ProtectedRoute from "./components/auth/ProtectedRoute";
 // import { AuthProvider } from "./context/AuthContext";
 // import ProductCatalog from "./components/POS/ProductCatalog";
-// import OurTeam from "./pages/Team/OurTeam";
 // import { CartProvider } from "./context/CartContext";
 // import Header from "./components/Header";
 // import CartModal from "./components/cart/CartModal";
@@ -147,7 +144,7 @@ export default App;
 //           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 //           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 //           <Route path="/products" element={<ProductCatalog onAddToCart={(product) => console.log('Add to cart')} />} />
-//           <Route path="/team" element={<OurTeam />} />
+//         
 
 //           {/* POS Routes */}
 //           <Route path="/products" element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} />

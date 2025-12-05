@@ -19,6 +19,7 @@ const OurTeam = () => {
   ];
 
   return (
+    <section id="our-team" className="py-20 lg:py-28 bg-white">
     <div className=" bg-gray-50">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-900 to-green-700 text-white py-16">
@@ -116,12 +117,8 @@ const OurTeam = () => {
           ))}
         </div>
       </div>
-
-
-
-      {/* Company Values Section */}
-
-            </div>
+  </div>
+</section>
 
   );
 };
