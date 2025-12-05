@@ -30,25 +30,25 @@ const App = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
+            {/* <Route path="/team" element={<OurTeam />} /> */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route path="/team" element={<OurTeam />} />
 
-            {/* 🧪 TEST: Try Dashboard without DashboardLayout first */}
+
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
             } />
             
-            {/* 🧪 TEST: Products with DashboardLayout */}
+            
             <Route path="/products" element={
               <ProtectedRoute>
                   <ProductCatalog />
               </ProtectedRoute>
             } />
             
-            {/* 🧪 TEST: Other routes without layout first */}
+           
             <Route path="/invoices" element={
               <ProtectedRoute>
                 <AllInvoices />
