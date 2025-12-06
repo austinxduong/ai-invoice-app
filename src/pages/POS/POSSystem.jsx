@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Calculator, ShoppingCart, CreditCard, Receipt, Search } from 'lucide-react';
 import { usePOSTransaction } from '../../context/POSTransaction';
 import ProductSearch from '../../components/ProductSearch';
-// import TransactionSummary from './components/TransactionSummary';
+import TransactionSummary from '../../components/TransactionSummary';
 // import PaymentInterface from './components/PaymentInterface';
 // import ReceiptModal from './components/ReceiptModal';
 
@@ -90,21 +90,8 @@ const POSSystem = () => {
         </div>
 
         {/* Transaction Summary - TEMPORARY PLACEHOLDER */}
-        <div className="flex-1 overflow-auto p-4">
-          {hasItems ? (
-            <div className="space-y-2">
-              {/* Show basic item list for now */}
-              <p className="text-sm text-gray-600">Items in transaction:</p>
-              {/* We'll replace this with TransactionSummary component later */}
-              <div className="text-center py-8 text-gray-500">
-                Transaction items will appear here
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-gray-500">
-              No items in transaction
-            </div>
-          )}
+        <div className="flex-1 overflow-auto">
+            <TransactionSummary />
         </div>
 
         {/* Quick Actions Footer */}
