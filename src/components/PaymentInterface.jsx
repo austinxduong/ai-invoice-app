@@ -91,20 +91,46 @@ const PaymentInterface = ({ onComplete }) => {
       return;
     }
 
-    const completedTransaction = completeTransaction({
-      cashReceived,
-      changeAmount: totals.changeAmount,
-      paymentMethod: 'cash',
-      timestamp: new Date()
-    });
+    // create comprehensive receipt data
+    const receiptData = {
+        cashReceived,
+        changeAmount: totals.changeAmount,
+        paymentMethod: 'cash',
+        timestamp: new Date(),
+
+        itesm:items.map(item => ({
+            lineTotal:(item.pricingOption?.price || 0) * item.quantity
+        })),
+        totals: {
+            ...totals,
+            itemCount: items.length
+        }
+    };
+
+    const completedTransaction = completeTransaction(receiptData);
 
     setTransaction(completedTransaction);
     setPaymentComplete(true);
-    
+  
     if (onComplete) {
-      onComplete(completedTransaction);
+        onComplete(completedTransaction);
     }
-  };
+};
+
+//     const completedTransaction = completeTransaction({
+//       cashReceived,
+//       changeAmount: totals.changeAmount,
+//       paymentMethod: 'cash',
+//       timestamp: new Date()
+//     });
+
+//     setTransaction(completedTransaction);
+//     setPaymentComplete(true);
+    
+//     if (onComplete) {
+//       onComplete(completedTransaction);
+//     }
+//   };
 
   // Start new transaction
   const handleNewTransaction = () => {

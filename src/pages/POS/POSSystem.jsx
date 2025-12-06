@@ -4,8 +4,7 @@ import { usePOSTransaction } from '../../context/POSTransaction';
 import ProductSearch from '../../components/ProductSearch';
 import TransactionSummary from '../../components/TransactionSummary';
 import PaymentInterface from '../../components/PaymentInterface';
-
-// import ReceiptModal from './components/ReceiptModal';
+import ReceiptModal from '../../components/ReceiptModal';
 
 const POSSystem = () => {
   const { hasItems, totals, itemCount } = usePOSTransaction();
@@ -122,10 +121,10 @@ const POSSystem = () => {
         </div>
       </div>
 
-      {/* Temporarily comment out receipt modal */}
-      {/* {showReceiptModal && (
+      
+      {showReceiptModal && (
         <ReceiptModal onClose={() => setShowReceiptModal(false)} />
-      )} */}
+      )} 
     </div>
   );
 };
