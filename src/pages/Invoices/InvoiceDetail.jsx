@@ -168,9 +168,61 @@ const InvoiceDetail = () => {
               </tbody>
             </table>
           </div>
+
+          <div className="flex justify-end mt-8">
+            <div className="w-full max-w-sm space-y-3">
+              <div className="flex justify-between text-sm text-slate-600">
+                <span>Subtotal</span>
+                <span>${invoice.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-slate-600">
+                  <span>Tax</span>
+                  <span>${invoice.taxTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg text-slate-900 border-t border-slate-200 pt-3 mt-3">
+                  <span>Total</span>
+                  <span>${invoice.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {invoice.notes && (
+              <div className="mt-8 pt-8 border-t border-slate-200">
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Notes</h3>
+                <p className="text-sm text-slate-600">{invoice.notes}</p>
+              </div>
+            )}
         </div>
       </div>
-      
+
+      <style>
+        {`
+          @page {
+            padding:10px;
+          }
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            #invoice-content-wrapper, #invoice-content-wrapper * {
+              visibility: visible;
+            }
+            #invoice-content-wrapper {
+              position: absolute;
+              left: 0;
+              top: 0;
+              right: 0;
+              width: 100%
+            }
+            #invoice-preview {
+              box-shadow: none;
+              border: none;
+              borer-radius: 0;
+              padding: 0;
+            }
+          }
+        `}
+      </style>
     </>
   )
 }
