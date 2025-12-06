@@ -18,6 +18,8 @@ import { AuthProvider } from "./context/AuthContext";
 import ProductCatalog from "./components/POS/ProductCatalog";
 import { CartProvider } from "./context/CartContext";
 import CartModal from "./components/cart/CartModal";
+import POSSystem from "./pages/POS/POSSystem";
+import { POSTransactionProvider } from "./context/POSTransaction";
 
 const App = () => {
   console.log('🚨 APP COMPONENT LOADING');
@@ -25,6 +27,7 @@ const App = () => {
   return (
     <AuthProvider>
       <CartProvider>
+        <POSTransactionProvider>
         <Router>
           <Routes>
             {/* Public Routes */}
@@ -70,10 +73,18 @@ const App = () => {
                 <ProfilePage />
               </ProtectedRoute>
             } />
+
+          <Route path="/pos" element={
+            <ProtectedRoute>
+              <POSSystem />
+            </ProtectedRoute>
+            } />
+
           </Routes>
 
           <CartModal />
         </Router>
+        </POSTransactionProvider>
 
         <Toaster
           toastOptions={{
