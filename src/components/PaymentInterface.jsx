@@ -17,16 +17,24 @@ const PaymentInterface = ({ onComplete }) => {
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [transaction, setTransaction] = useState(null);
 
-  // Quick cash amounts for easy selection
-  const quickAmounts = [
-    totals.grandTotal, // Exact amount
-    Math.ceil(totals.grandTotal / 5) * 5, // Round to nearest $5
-    Math.ceil(totals.grandTotal / 10) * 10, // Round to nearest $10
-    Math.ceil(totals.grandTotal / 20) * 20, // Round to nearest $20
-    50, 100 // Common cash amounts
-  ].filter((amount, index, arr) => 
-    amount >= totals.grandTotal && arr.indexOf(amount) === index
-  ).sort((a, b) => a - b);
+const baseTotal = parseFloat(totals.grandTotal.toFixed(2));
+const quickAmounts = [
+  baseTotal, // Exact amount
+  Math.ceil(baseTotal / 5) * 5, // Round to nearest $5
+  Math.ceil(baseTotal / 10) * 10, // Round to nearest $10
+  Math.ceil(baseTotal / 20) * 20, // Round to nearest $20
+  50, 100 // Common cash amounts
+]
+  .filter(amount => amount >= baseTotal)
+  .reduce((unique, amount) => {
+    // Better deduplication
+    if (!unique.find(a => Math.abs(a - amount) < 0.01)) {
+      unique.push(amount);
+    }
+    return unique;
+  }, [])
+  .sort((a, b) => a - b)
+  .slice(0, 6); // Limit to 6 buttons max
 
   // Update cash received when input changes
   useEffect(() => {
@@ -79,10 +87,12 @@ const PaymentInterface = ({ onComplete }) => {
   };
 
   // Handle quick amount selection
-  const handleQuickAmount = (amount) => {
-    if (paymentComplete) return;
-    setCashInput(amount.toString());
-  };
+const handleQuickAmount = (amount) => {
+  if (paymentComplete) return;
+  // Round to 2 decimal places to fix precision issues
+  const roundedAmount = Math.round(amount * 100) / 100;
+  setCashInput(roundedAmount.toFixed(2));
+};
 
   // Process payment
   const handleProcessPayment = () => {
@@ -92,20 +102,21 @@ const PaymentInterface = ({ onComplete }) => {
     }
 
     // create comprehensive receipt data
-    const receiptData = {
-        cashReceived,
-        changeAmount: totals.changeAmount,
-        paymentMethod: 'cash',
-        timestamp: new Date(),
-
-        itesm:items.map(item => ({
-            lineTotal:(item.pricingOption?.price || 0) * item.quantity
-        })),
-        totals: {
-            ...totals,
-            itemCount: items.length
-        }
-    };
+  const receiptData = {
+    cashReceived,
+    changeAmount: totals.changeAmount,
+    paymentMethod: 'cash',
+    timestamp: new Date(),
+    // FIXED: was "itesm", now "items" with full details
+    items: items.map(item => ({
+      ...item, // Include ALL item details (name, sku, cannabis info, etc.)
+      lineTotal: (item.pricingOption?.price || 0) * item.quantity
+    })),
+    totals: {
+      ...totals,
+      itemCount: items.length
+    }
+  }
 
     const completedTransaction = completeTransaction(receiptData);
 
