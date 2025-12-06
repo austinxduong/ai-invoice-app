@@ -3,7 +3,8 @@ import { Calculator, ShoppingCart, CreditCard, Receipt, Search } from 'lucide-re
 import { usePOSTransaction } from '../../context/POSTransaction';
 import ProductSearch from '../../components/ProductSearch';
 import TransactionSummary from '../../components/TransactionSummary';
-// import PaymentInterface from './components/PaymentInterface';
+import PaymentInterface from '../../components/PaymentInterface';
+
 // import ReceiptModal from './components/ReceiptModal';
 
 const POSSystem = () => {
@@ -58,8 +59,8 @@ const POSSystem = () => {
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto p-6">
           {currentView === 'products' && <ProductSearch />}
-          {/* Temporarily comment out payment view until we build it */}
-          {/* {currentView === 'payment' && <PaymentInterface onComplete={() => setShowReceiptModal(true)} />} */}
+       
+          {currentView === 'payment' && <PaymentInterface onComplete={() => setShowReceiptModal(true)} />}
         </div>
       </div>
 
