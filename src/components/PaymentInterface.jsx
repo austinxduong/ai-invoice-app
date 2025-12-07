@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Calculator, Check, ArrowLeft, Receipt } from 'lucide-react';
 import { usePOSTransaction } from '../context/POSTransaction';
-// import { usePOSTransaction } from '../../../context/POSTransactionContext';
 
 const PaymentInterface = ({ onComplete }) => {
   const { 
@@ -20,10 +19,11 @@ const PaymentInterface = ({ onComplete }) => {
 const baseTotal = parseFloat(totals.grandTotal.toFixed(2));
 const quickAmounts = [
   baseTotal, // Exact amount
+  Math.ceil(baseTotal / 1) * 1,
   Math.ceil(baseTotal / 5) * 5, // Round to nearest $5
   Math.ceil(baseTotal / 10) * 10, // Round to nearest $10
   Math.ceil(baseTotal / 20) * 20, // Round to nearest $20
-  50, 100 // Common cash amounts
+  50, 100, // Common cash amounts
 ]
   .filter(amount => amount >= baseTotal)
   .reduce((unique, amount) => {
@@ -331,7 +331,7 @@ const handleQuickAmount = (amount) => {
             {/* Process Payment Button */}
             <button
               onClick={handleProcessPayment}
-              disabled={cashReceived < totals.grandTotal}
+              disabled={cashReceived < totals.grandTotal} // if cash received is less than grand total, disable 'complete transaction' button
               className={`w-full py-4 rounded-lg font-bold text-lg transition-colors ${
                 cashReceived >= totals.grandTotal
                   ? 'bg-green-600 text-white hover:bg-green-700'
@@ -339,7 +339,7 @@ const handleQuickAmount = (amount) => {
               }`}
             >
               {cashReceived >= totals.grandTotal
-                ? `Complete Transaction ${totals.changeAmount > 0 ? `• Change: ${formatCurrency(totals.changeAmount)}` : ''}`
+                ? `Complete Transaction ${totals.changeAmount >= 0 ? `• Change: ${formatCurrency(totals.changeAmount)}` : ''}`
                 : `Need ${formatCurrency(totals.grandTotal - cashReceived)} More`
               }
             </button>
