@@ -80,6 +80,12 @@ const App = () => {
             </ProtectedRoute>
             } />
 
+          {/* <Route path="/reports" element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          } /> */}
+
           </Routes>
 
           <CartModal />

@@ -17,6 +17,8 @@ const PaymentInterface = ({ onComplete }) => {
   const [transaction, setTransaction] = useState(null);
 
 const baseTotal = parseFloat(totals.grandTotal.toFixed(2));
+
+
 const quickAmounts = [
   baseTotal, // Exact amount
   Math.ceil(baseTotal / 1) * 1,
@@ -74,9 +76,10 @@ const quickAmounts = [
     if (typeof value === 'number' || (typeof value === 'string' && !isNaN(value))) {
       setCashInput(prev => {
         const newValue = prev + value.toString();
+        console.log
         // Prevent more than 2 decimal places
         if (newValue.includes('.')) {
-          const parts = newValue.split('.');
+          const parts = newValue.split('.'); // 12.00 = ["12", "00"]
           if (parts[1] && parts[1].length > 2) {
             return prev;
           }
@@ -349,6 +352,8 @@ const handleQuickAmount = (amount) => {
     </div>
   );
 };
+
+
 
 // Payment Complete Component
 const PaymentComplete = ({ transaction, onNewTransaction }) => {
