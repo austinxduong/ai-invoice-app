@@ -12,6 +12,25 @@ const POSSystem = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [completedTransaction, setCompletedTransaction] = useState(null);
 
+const handlePaymentComplete = async (transactionPromise) => {
+  try {
+    console.log('💳 Payment processing...');
+    
+    // Wait for the transaction Promise to resolve
+    const transaction = await transactionPromise;
+    
+    console.log('💳 Payment completed, showing receipt for:', transaction);
+    setCompletedTransaction(transaction);
+    setCurrentView('products');
+    setShowReceiptModal(true);
+    
+  } catch (error) {
+    console.error('❌ Error completing payment:', error);
+    // Handle error - maybe show error toast
+  }
+};
+
+
   return (
     <div className="h-screen flex bg-gray-50">
       {/* Left Panel - Product Search & Add */}
@@ -60,8 +79,8 @@ const POSSystem = () => {
         <div className="flex-1 overflow-auto p-6">
           {currentView === 'products' && <ProductSearch />}
        
-          {currentView === 'payment' && <PaymentInterface onComplete={() => setShowReceiptModal(true)} />}
-        {/* {currentView === 'payment' && <PaymentInterface onComplete={handlePaymentComplete} />} */}
+          {/* {currentView === 'payment' && <PaymentInterface onComplete={() => setShowReceiptModal(true)} />} */}
+        {currentView === 'payment' && <PaymentInterface onComplete={handlePaymentComplete} />}
         </div>
       </div>
 
@@ -124,15 +143,15 @@ const POSSystem = () => {
       </div>
 
       
-      {showReceiptModal && (
-        <ReceiptModal 
-          onClose={() => {
-            setShowReceiptModal(false);
-            setCompletedTransaction(null);
-          }} 
-          transaction={completedTransaction} // Pass the transaction directly
-        />
-      )}
+  {showReceiptModal && (
+    <ReceiptModal 
+      onClose={() => {
+        setShowReceiptModal(false);
+        setCompletedTransaction(null);
+      }} 
+      transaction={completedTransaction} // Pass transaction directly
+    />
+  )}
     </div>
   );
 };

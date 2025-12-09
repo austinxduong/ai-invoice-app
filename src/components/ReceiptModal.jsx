@@ -1,39 +1,59 @@
 import React, { useRef } from 'react';
 import { X, Printer, Download, Check } from 'lucide-react';
 import { usePOSTransaction } from '../context/POSTransaction';
-// import { usePOSTransaction } from '../../../context/POSTransactionContext';
 
 const ReceiptModal = ({ onClose, transaction = null }) => {
   const { completedTransactions, totals } = usePOSTransaction();
   const receiptRef = useRef();
 
+console.log('🧾 ReceiptModal - Props received:', { transaction, onClose });
+console.log('🧾 ReceiptModal - Completed transactions:', completedTransactions);
+
   // Use provided transaction or the most recent completed transaction
 const receiptTransaction = transaction || completedTransactions[completedTransactions.length - 1];
+console.log('🧾 ReceiptModal - Receipt transaction:', receiptTransaction);
 
-  if (!receiptTransaction) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
-        <div className="relative bg-white rounded-lg p-6 max-w-md">
-          <h2 className="text-lg font-semibold mb-4">Loading Receipt ...</h2> 
-          {/* <p className="text-gray-600 mb-4">Complete a transaction to generate a receipt.</p> */}
-          {/* <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button> */}
-        </div>
-      </div>
-    );
-  }
+// If no transaction is available, just close the modal instead of showing an alert
+if (!receiptTransaction) {
+  console.log('❌ No transaction available, closing receipt modal');
+  setTimeout(() => onClose(), 0); // Use setTimeout to avoid calling during render
+  return null;
+}
 
-  // Format currency
+    console.log('🧾 ReceiptModal - About to render with transaction:', receiptTransaction);
+
+
+// Helper functions to handle both transaction formats (localStorage vs database)
+const getTransactionId = () => {
+  return receiptTransaction.transactionId || receiptTransaction.id || receiptTransaction._id || 'N/A';
+};
+
+const getTransactionTimestamp = () => {
+  return receiptTransaction.createdAt || receiptTransaction.timestamp || new Date();
+};
+
+const getPaymentMethod = () => {
+  return receiptTransaction.paymentMethod || 'cash';
+};
+
+const getTotals = () => {
+  return receiptTransaction.totals || {};
+};
+
+const getItems = () => {
+  return receiptTransaction.items || [];
+};
+
+const getReceiptData = () => {
+  return receiptTransaction.receiptData || {};
+};
+
+  // Rest of your existing ReceiptModal component code...
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(amount || 0);
+    }).format(amount);
   };
 
   // Format date
@@ -160,11 +180,11 @@ ${divider}
             <div className="mb-6 space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>Transaction ID:</span>
-                <span className="font-medium">{receiptTransaction.id}</span>
+                <span className="font-medium">{getTransactionId()}</span>
               </div>
               <div className="flex justify-between">
                 <span>Date & Time:</span>
-                <span className="font-medium">{formatDate(receiptTransaction.timestamp)}</span>
+                <span className="font-medium">{formatDate(getTransactionTimestamp())}</span>
               </div>
               <div className="flex justify-between">
                 <span>Cashier:</span>
@@ -172,7 +192,7 @@ ${divider}
               </div>
               <div className="flex justify-between">
                 <span>Payment Method:</span>
-                <span className="font-medium uppercase">{receiptTransaction.paymentMethod}</span>
+                <span className="font-medium uppercase">{getPaymentMethod()}</span>
               </div>
             </div>
 
@@ -183,7 +203,7 @@ ${divider}
               </div>
               
               <div className="space-y-4">
-                {receiptTransaction.items.map((item, index) => (
+                {getItems().map((item, index) => (
                   <div key={index} className="text-xs space-y-1">
                     {/* Item Name */}
                     <div className="font-medium">{item.name}</div>
@@ -232,23 +252,23 @@ ${divider}
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>{formatCurrency(receiptTransaction.totals.subtotal)}</span>
+                  <span>{formatCurrency(getTotals().subtotal || 0)}</span>
                 </div>
                 
-                {receiptTransaction.totals.discountAmount > 0 && (
+                {getTotals().discountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount:</span>
-                    <span>-{formatCurrency(receiptTransaction.totals.discountAmount)}</span>
+                    <span>{formatCurrency(getTotals().discountAmount || 0)}</span>
                   </div>
                 )}
                 
                 {/* Detailed Tax Breakdown */}
-                {receiptTransaction.totals.taxBreakdown && (
+                {getTotals().taxBreakdown && (
                   <div className="space-y-1 ml-2">
                     {receiptTransaction.totals.taxBreakdown.excise > 0 && (
                       <div className="flex justify-between text-xs text-gray-600">
                         <span>Cannabis Excise Tax:</span>
-                        <span>{formatCurrency(receiptTransaction.totals.taxBreakdown.excise)}</span>
+                        <span>{formatCurrency(getTotals().taxBreakdown?.excise || 0)}</span>
                       </div>
                     )}
                     {receiptTransaction.totals.taxBreakdown.sales?.total > 0 && (
@@ -268,13 +288,13 @@ ${divider}
                 
                 <div className="flex justify-between font-medium">
                   <span>Total Tax:</span>
-                  <span>{formatCurrency(receiptTransaction.totals.taxAmount)}</span>
+                  <span>{formatCurrency(getTotals().taxAmount || 0)}</span>
                 </div>
                 
                 <div className="border-t border-gray-300 pt-2">
                   <div className="flex justify-between text-lg font-bold">
                     <span>TOTAL:</span>
-                    <span>{formatCurrency(receiptTransaction.totals.grandTotal)}</span>
+                    <span>{formatCurrency(getTotals().grandTotal || 0)}</span>
                   </div>
                 </div>
               </div>
@@ -285,14 +305,14 @@ ${divider}
               <div className="flex justify-between">
                 <span>Cash Received:</span>
                 <span className="font-medium">
-                  {formatCurrency(receiptTransaction.receiptData?.cashReceived || 0)}
+                  {formatCurrency(getReceiptData().cashReceived || 0)}
                 </span>
               </div>
               
               {receiptTransaction.totals.changeAmount > 0 && (
                 <div className="flex justify-between font-bold text-green-600">
                   <span>Change Given:</span>
-                  <span>{formatCurrency(receiptTransaction.totals.changeAmount)}</span>
+                  <span>{formatCurrency(getTotals().changeAmount || 0)}</span>
                 </div>
               )}
             </div>
