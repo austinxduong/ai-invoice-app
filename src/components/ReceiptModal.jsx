@@ -15,7 +15,7 @@ const receiptTransaction = transaction || completedTransactions[completedTransac
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
         <div className="relative bg-white rounded-lg p-6 max-w-md">
-          <h2 className="text-lg font-semibold mb-4">Loading Receipt</h2> 
+          <h2 className="text-lg font-semibold mb-4">Loading Receipt ...</h2> 
           {/* <p className="text-gray-600 mb-4">Complete a transaction to generate a receipt.</p> */}
           {/* <button
             onClick={onClose}
