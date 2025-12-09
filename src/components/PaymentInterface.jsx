@@ -42,7 +42,7 @@ const quickAmounts = [
   useEffect(() => {
     const amount = parseFloat(cashInput) || 0;
     setCashReceived(amount);
-  }, [cashInput, setCashReceived]);
+  }, [cashInput]);
 
   // Format currency
   const formatCurrency = (amount) => {

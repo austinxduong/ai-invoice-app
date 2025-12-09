@@ -30,6 +30,7 @@ const App = () => {
     <AuthProvider>
       <CartProvider>
         <POSTransactionProvider>
+          <ReportingProvider>
         <Router>
           <Routes>
             {/* Public Routes */}
@@ -82,20 +83,17 @@ const App = () => {
             </ProtectedRoute>
             } />
 
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <ReportingProvider>
-                      
-                        <ReportsDashboard />
-                      
-                    </ReportingProvider>
-                  </ProtectedRoute>
-                } />
+          <Route path="/reports" element={
+            <ProtectedRoute>
+                  <ReportsDashboard />
+            </ProtectedRoute>
+          } />
 
           </Routes>
 
-          <CartModal />
-        </Router>
+              <CartModal />
+            </Router>
+          </ReportingProvider>
         </POSTransactionProvider>
 
         <Toaster

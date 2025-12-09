@@ -26,8 +26,11 @@ const ReportsDashboard = () => {
   const [activeReport, setActiveReport] = useState('overview');
 
   // Get today's data for quick overview
+  console.log('🎯 ReportsDashboard: Getting today sales...');
   const todaysSales = getTodaysSales();
+  console.log('🎯 ReportsDashboard: Today sales result:', todaysSales);
   const monthlyTax = getThisMonthTax();
+  console.log('🎯 ReportsDashboard: Monthly tax result:', monthlyTax);
 
   // Quick stats for dashboard
   const quickStats = [

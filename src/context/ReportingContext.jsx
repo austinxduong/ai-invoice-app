@@ -5,6 +5,8 @@ const ReportingContext = createContext();
 
 export const ReportingProvider = ({ children }) => {
   const { completedTransactions } = usePOSTransaction();
+  console.log('📊 ReportingContext: Received transactions:', completedTransactions);
+  console.log('📊 ReportingContext: Transaction count:', completedTransactions?.length || 0);
   const [selectedDateRange, setSelectedDateRange] = useState({
     startDate: new Date(new Date().setDate(1)), // First day of current month
     endDate: new Date()

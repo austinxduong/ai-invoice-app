@@ -1,10 +1,10 @@
-import React, {createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { calculateCartTax } from '../utils/cannabisTax';
-
 const POSTransactionContext = createContext();
 
 const transactionReducer = (state, action) => {
+
     switch (action.type) {
         case 'ADD_ITEM':
             const existingItemIndex = state.items.findIndex(
@@ -85,11 +85,18 @@ const transactionReducer = (state, action) => {
                 ...state,
                 cashReceived: action.payload
             };
-
+        
+        case 'LOAD_TRANSACTIONS':
+            return {
+                ...state,
+                completedTransactions: action.payload
+            };
         default:
             return state;
     }
 };
+
+
 
 export const POSTransactionProvider = ({ children }) => {
     const [state, dispatch] = useReducer(transactionReducer, {
@@ -100,6 +107,35 @@ export const POSTransactionProvider = ({ children }) => {
         cashReceived: 0,
         completedTransactions: []
     });
+
+        // Load saved transactions from localStorage on component mount
+    useEffect(() => {
+        console.log('🔍 POSTransaction: Loading saved transactions...');
+        const savedTransactions = localStorage.getItem('completedTransactions');
+        console.log('🔍 POSTransaction: localStorage data:', savedTransactions);
+        if (savedTransactions) {
+            try {
+                const parsedTransactions = JSON.parse(savedTransactions);
+                console.log('🔍 POSTransaction: Parsed transactions:', parsedTransactions);
+                dispatch({ type: 'LOAD_TRANSACTIONS', payload: parsedTransactions });
+            } catch (error) {
+                console.error('Error loading saved transactions:', error);
+            }
+        }
+    }, []);
+
+        // Save transactions to localStorage whenever completedTransactions changes
+    const isInitialLoad = useRef(true);
+
+    useEffect(() => {
+        if (isInitialLoad.current) {
+            isInitialLoad.current = false;
+            return; // Skip saving on initial load
+        }
+        console.log('💾 POSTransaction: Saving to localStorage:', state.completedTransactions);
+        localStorage.setItem('completedTransactions', JSON.stringify(state.completedTransactions));
+    }, [state.completedTransactions]);
+
 
     // Calculate totals with tax
     const calculateTotals = () => {
@@ -168,9 +204,9 @@ export const POSTransactionProvider = ({ children }) => {
         toast.success(`${discount.name} applied`);
     };
 
-    const setCashReceived = (amount) => {
-        dispatch({ type: 'SET_CASH_RECEIVED', payload: amount });
-    };
+    const setCashReceived = useCallback((amount) =>{
+        dispatch({type: 'SET_CASH_RECEIVED', payload:amount }); 
+    },[]);
 
     const completeTransaction = (receiptData) => {
         const transaction = {
