@@ -92,6 +92,11 @@ const ReportsDashboard = () => {
         data = monthlyTax.dailyBreakdown;
         filename = 'monthly_tax_report';
         break;
+      case 'product-performance':
+        const productData = generateProductPerformance(selectedDateRange.startDate, selectedDateRange.endDate)
+        data = productData;
+        filename = 'product_performance';
+        break;
       case 'cash-report':
         const cashReport = generateCashReport(selectedDateRange.startDate, selectedDateRange.endDate);
         data = cashReport.transactions;
