@@ -75,13 +75,12 @@ const quickAmounts = [
     // Handle numbers
     if (typeof value === 'number' || (typeof value === 'string' && !isNaN(value))) {
       setCashInput(prev => {
-        const newValue = prev + value.toString();
-        console.log
+        const newValue = prev + value.toString(); // concatenates/appends numbers together via. calculator style, and updates cashInput state
         // Prevent more than 2 decimal places
-        if (newValue.includes('.')) {
-          const parts = newValue.split('.'); // 12.00 = ["12", "00"]
-          if (parts[1] && parts[1].length > 2) {
-            return prev;
+        if (newValue.includes('.')) { // 12.008 // aka invalid
+          const parts = newValue.split('.'); // 12.00 = ["12", "008"]
+          if (parts[1] && parts[1].length > 2) { // 12.008 parts[1] > 2. return previous state 12.00
+            return prev; // 12.00
           }
         }
         return newValue;
@@ -98,11 +97,22 @@ const handleQuickAmount = (amount) => {
 };
 
   // Process payment
-  const handleProcessPayment = () => {
-    if (cashReceived < totals.grandTotal) {
-      alert('Insufficient cash received');
-      return;
-    }
+
+const handleProcessPayment = () => {
+    if (cashReceived.toFixed(2) < totals.grandTotal.toFixed(2)) {
+        alert('Insufficient cash received');
+    return;
+    // returns exact amount 19.06
+}
+
+// this works, but outputs 1906 instead of 19.06
+// const handleProcessPayment = () => {
+//     if (Math.round(cashReceived * 100) < Math.round(totals.grandTotal * 100)) {
+//         alert('Insufficient cash received');
+//     return;
+// }
+
+
 
     // create comprehensive receipt data
   const receiptData = {
@@ -130,21 +140,6 @@ const handleQuickAmount = (amount) => {
         onComplete(completedTransaction);
     }
 };
-
-//     const completedTransaction = completeTransaction({
-//       cashReceived,
-//       changeAmount: totals.changeAmount,
-//       paymentMethod: 'cash',
-//       timestamp: new Date()
-//     });
-
-//     setTransaction(completedTransaction);
-//     setPaymentComplete(true);
-    
-//     if (onComplete) {
-//       onComplete(completedTransaction);
-//     }
-//   };
 
   // Start new transaction
   const handleNewTransaction = () => {
@@ -300,7 +295,7 @@ const handleQuickAmount = (amount) => {
           {/* Payment Status */}
           <div className="space-y-4">
             <div className={`p-4 rounded-lg border-2 ${
-              cashReceived >= totals.grandTotal
+              Math.round(cashReceived * 100) >= Math.round(totals.grandTotal * 100)
                 ? 'bg-green-50 border-green-200'
                 : cashReceived > 0
                 ? 'bg-yellow-50 border-yellow-200'
@@ -330,21 +325,29 @@ const handleQuickAmount = (amount) => {
                 </div>
               )}
             </div>
+
+            <div className="text-xs text-gray-500 p-2 bg-yellow-50 rounded mb-2">
+                <div>Debug Info:</div>
+                <div>cashReceived: {cashReceived}</div>
+                <div>grandTotal: {totals.grandTotal.toFixed(2)} </div>
+                <div>Comparison: {cashReceived >= totals.grandTotal ? 'TRUE' : 'FALSE'}</div>
+                <div>Rounded comparison: {Math.round(cashReceived * 100) >= Math.round(totals.grandTotal * 100) ? 'TRUE' : 'FALSE'}</div>
+            </div>
             
             {/* Process Payment Button */}
             <button
-              onClick={handleProcessPayment}
-              disabled={cashReceived < totals.grandTotal} // if cash received is less than grand total, disable 'complete transaction' button
-              className={`w-full py-4 rounded-lg font-bold text-lg transition-colors ${
-                cashReceived >= totals.grandTotal
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {cashReceived >= totals.grandTotal
-                ? `Complete Transaction ${totals.changeAmount >= 0 ? `• Change: ${formatCurrency(totals.changeAmount)}` : ''}`
-                : `Need ${formatCurrency(totals.grandTotal - cashReceived)} More`
-              }
+                onClick={handleProcessPayment}
+                disabled={parseFloat(cashReceived.toFixed(2)) < parseFloat(totals.grandTotal.toFixed(2))}
+                className={`w-full py-4 rounded-lg font-bold text-lg transition-colors ${
+                    parseFloat(cashReceived.toFixed(2)) >= parseFloat(totals.grandTotal.toFixed(2))
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                >
+                {parseFloat(cashReceived.toFixed(2)) >= parseFloat(totals.grandTotal.toFixed(2))
+                    ? `Complete Transaction ${totals.changeAmount > 0 ? `• Change: ${formatCurrency(totals.changeAmount)}` : ''}`
+                    : `Need ${formatCurrency(totals.grandTotal - cashReceived)} More`
+            }
             </button>
           </div>
         </div>
