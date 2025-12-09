@@ -20,6 +20,8 @@ import { CartProvider } from "./context/CartContext";
 import CartModal from "./components/cart/CartModal";
 import POSSystem from "./pages/POS/POSSystem";
 import { POSTransactionProvider } from "./context/POSTransaction";
+import ReportsDashboard from "./pages/Reports/ReportsDashboard";
+import { ReportingProvider } from "./context/ReportingContext";
 
 const App = () => {
   console.log('🚨 APP COMPONENT LOADING');
@@ -80,11 +82,15 @@ const App = () => {
             </ProtectedRoute>
             } />
 
-          {/* <Route path="/reports" element={
-            <ProtectedRoute>
-              <Reports />
-            </ProtectedRoute>
-          } /> */}
+                <Route path="/reports" element={
+                  <ProtectedRoute>
+                    <ReportingProvider>
+                      
+                        <ReportsDashboard />
+                      
+                    </ReportingProvider>
+                  </ProtectedRoute>
+                } />
 
           </Routes>
 
