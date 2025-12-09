@@ -10,6 +10,7 @@ const POSSystem = () => {
   const { hasItems, totals, itemCount } = usePOSTransaction();
   const [currentView, setCurrentView] = useState('products');
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [completedTransaction, setCompletedTransaction] = useState(null);
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -60,6 +61,7 @@ const POSSystem = () => {
           {currentView === 'products' && <ProductSearch />}
        
           {currentView === 'payment' && <PaymentInterface onComplete={() => setShowReceiptModal(true)} />}
+        {/* {currentView === 'payment' && <PaymentInterface onComplete={handlePaymentComplete} />} */}
         </div>
       </div>
 
@@ -123,8 +125,14 @@ const POSSystem = () => {
 
       
       {showReceiptModal && (
-        <ReceiptModal onClose={() => setShowReceiptModal(false)} />
-      )} 
+        <ReceiptModal 
+          onClose={() => {
+            setShowReceiptModal(false);
+            setCompletedTransaction(null);
+          }} 
+          transaction={completedTransaction} // Pass the transaction directly
+        />
+      )}
     </div>
   );
 };

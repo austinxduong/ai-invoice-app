@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { calculateCartTax } from '../utils/cannabisTax';
+import { createTransaction } from '../utils/transactionApi';
+
+
 const POSTransactionContext = createContext();
+
 
 const transactionReducer = (state, action) => {
 
@@ -108,33 +112,33 @@ export const POSTransactionProvider = ({ children }) => {
         completedTransactions: []
     });
 
-        // Load saved transactions from localStorage on component mount
-    useEffect(() => {
-        console.log('🔍 POSTransaction: Loading saved transactions...');
-        const savedTransactions = localStorage.getItem('completedTransactions');
-        console.log('🔍 POSTransaction: localStorage data:', savedTransactions);
-        if (savedTransactions) {
-            try {
-                const parsedTransactions = JSON.parse(savedTransactions);
-                console.log('🔍 POSTransaction: Parsed transactions:', parsedTransactions);
-                dispatch({ type: 'LOAD_TRANSACTIONS', payload: parsedTransactions });
-            } catch (error) {
-                console.error('Error loading saved transactions:', error);
-            }
-        }
-    }, []);
+    //     // Load saved transactions from localStorage on component mount
+    // useEffect(() => {
+    //     console.log('🔍 POSTransaction: Loading saved transactions...');
+    //     const savedTransactions = localStorage.getItem('completedTransactions');
+    //     console.log('🔍 POSTransaction: localStorage data:', savedTransactions);
+    //     if (savedTransactions) {
+    //         try {
+    //             const parsedTransactions = JSON.parse(savedTransactions);
+    //             console.log('🔍 POSTransaction: Parsed transactions:', parsedTransactions);
+    //             dispatch({ type: 'LOAD_TRANSACTIONS', payload: parsedTransactions });
+    //         } catch (error) {
+    //             console.error('Error loading saved transactions:', error);
+    //         }
+    //     }
+    // }, []);
 
-        // Save transactions to localStorage whenever completedTransactions changes
-    const isInitialLoad = useRef(true);
+    //     // Save transactions to localStorage whenever completedTransactions changes
+    // const isInitialLoad = useRef(true);
 
-    useEffect(() => {
-        if (isInitialLoad.current) {
-            isInitialLoad.current = false;
-            return; // Skip saving on initial load
-        }
-        console.log('💾 POSTransaction: Saving to localStorage:', state.completedTransactions);
-        localStorage.setItem('completedTransactions', JSON.stringify(state.completedTransactions));
-    }, [state.completedTransactions]);
+    // useEffect(() => {
+    //     if (isInitialLoad.current) {
+    //         isInitialLoad.current = false;
+    //         return; // Skip saving on initial load
+    //     }
+    //     console.log('💾 POSTransaction: Saving to localStorage:', state.completedTransactions);
+    //     localStorage.setItem('completedTransactions', JSON.stringify(state.completedTransactions));
+    // }, [state.completedTransactions]);
 
 
     // Calculate totals with tax
@@ -208,21 +212,39 @@ export const POSTransactionProvider = ({ children }) => {
         dispatch({type: 'SET_CASH_RECEIVED', payload:amount }); 
     },[]);
 
-    const completeTransaction = (receiptData) => {
+const completeTransaction = async (receiptData) => {
+    try {
         const transaction = {
-            id: `TXN-${Date.now()}`,
-            timestamp: new Date(),
+            transactionId: `TXN-${Date.now()}`,
             items: state.items,
-            totals: calculateTotals(), // FIXED: was 'total'
+            totals: calculateTotals(),
+            discount: state.discount,
             paymentMethod: state.paymentMethod,
+            cashReceived: state.cashReceived,
             customerInfo: state.customerInfo,
             receiptData
         };
 
-        dispatch({ type: 'COMPLETE_TRANSACTION', payload: transaction }); // FIXED: typo 'TRANSACTINO'
+        // Save to database
+        const savedTransaction = await createTransaction(transaction);
+        
+        // Create compatibility object for PaymentComplete component
+        const compatibleTransaction = {
+            ...savedTransaction.transaction,
+            id: savedTransaction.transaction.transactionId || savedTransaction.transaction._id, // Add 'id' for compatibility
+            timestamp: new Date(savedTransaction.transaction.createdAt) // Add timestamp for compatibility
+        };
+        
+        dispatch({ type: 'COMPLETE_TRANSACTION', payload: compatibleTransaction });
         toast.success('Transaction completed successfully');
-        return transaction;
-    };
+        return compatibleTransaction;
+
+    } catch (error) {
+        console.error('Transaction failed:', error);
+        toast.error(`Transaction failed: ${error.message}`);
+        throw error;
+    }
+};
 
     const clearTransaction = () => {
         dispatch({ type: 'CLEAR_TRANSACTION' });

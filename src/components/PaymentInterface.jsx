@@ -374,6 +374,27 @@ const PaymentComplete = ({ transaction, onNewTransaction }) => {
     onNewTransaction();
   };
 
+  // Handle both localStorage format and database format
+  const getTransactionId = () => {
+    return transaction.transactionId || transaction.id || transaction._id || 'N/A';
+  };
+
+  const getGrandTotal = () => {
+    return transaction.totals?.grandTotal || 0;
+  };
+
+  const getCashReceived = () => {
+    return transaction.receiptData?.cashReceived || transaction.cashReceived || 0;
+  };
+
+  const getChangeAmount = () => {
+    return transaction.totals?.changeAmount || 0;
+  };
+
+  const getItemsCount = () => {
+    return transaction.items?.length || 0;
+  };
+
   return (
     <div className="text-center space-y-6">
       {/* Success Header */}
@@ -398,29 +419,29 @@ const PaymentComplete = ({ transaction, onNewTransaction }) => {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">Transaction ID</span>
-            <span className="font-medium">{transaction.id}</span>
+            <span className="font-medium">{getTransactionId()}</span>
           </div>
           
           <div className="flex justify-between">
             <span className="text-gray-600">Total Paid</span>
-            <span className="font-medium">{formatCurrency(transaction.totals.grandTotal)}</span>
+            <span className="font-medium">{formatCurrency(getGrandTotal())}</span>
           </div>
           
           <div className="flex justify-between">
             <span className="text-gray-600">Cash Received</span>
-            <span className="font-medium">{formatCurrency(transaction.receiptData.cashReceived)}</span>
+            <span className="font-medium">{formatCurrency(getCashReceived())}</span>
           </div>
           
-          {transaction.totals.changeAmount > 0 && (
+          {getChangeAmount() > 0 && (
             <div className="flex justify-between text-green-600 font-bold">
               <span>Change Given</span>
-              <span>{formatCurrency(transaction.totals.changeAmount)}</span>
+              <span>{formatCurrency(getChangeAmount())}</span>
             </div>
           )}
           
           <div className="flex justify-between">
             <span className="text-gray-600">Items</span>
-            <span className="font-medium">{transaction.items.length} items</span>
+            <span className="font-medium">{getItemsCount()} items</span>
           </div>
         </div>
       </div>
