@@ -3,9 +3,7 @@ import toast from 'react-hot-toast';
 import { calculateCartTax } from '../utils/cannabisTax';
 import { createTransaction } from '../utils/transactionApi';
 
-
 const POSTransactionContext = createContext();
-
 
 const transactionReducer = (state, action) => {
 
@@ -112,34 +110,6 @@ export const POSTransactionProvider = ({ children }) => {
         completedTransactions: []
     });
 
-    //     // Load saved transactions from localStorage on component mount
-    // useEffect(() => {
-    //     console.log('🔍 POSTransaction: Loading saved transactions...');
-    //     const savedTransactions = localStorage.getItem('completedTransactions');
-    //     console.log('🔍 POSTransaction: localStorage data:', savedTransactions);
-    //     if (savedTransactions) {
-    //         try {
-    //             const parsedTransactions = JSON.parse(savedTransactions);
-    //             console.log('🔍 POSTransaction: Parsed transactions:', parsedTransactions);
-    //             dispatch({ type: 'LOAD_TRANSACTIONS', payload: parsedTransactions });
-    //         } catch (error) {
-    //             console.error('Error loading saved transactions:', error);
-    //         }
-    //     }
-    // }, []);
-
-    //     // Save transactions to localStorage whenever completedTransactions changes
-    // const isInitialLoad = useRef(true);
-
-    // useEffect(() => {
-    //     if (isInitialLoad.current) {
-    //         isInitialLoad.current = false;
-    //         return; // Skip saving on initial load
-    //     }
-    //     console.log('💾 POSTransaction: Saving to localStorage:', state.completedTransactions);
-    //     localStorage.setItem('completedTransactions', JSON.stringify(state.completedTransactions));
-    // }, [state.completedTransactions]);
-
 
     // Calculate totals with tax
     const calculateTotals = () => {
@@ -147,6 +117,8 @@ export const POSTransactionProvider = ({ children }) => {
             (total, item) => total + (item.pricingOption?.price || 0) * item.quantity,
             0
         );
+
+    
 
         const discountAmount = state.discount
             ? (state.discount.type === 'percentage' // FIXED: typo 'discrount'
@@ -157,6 +129,11 @@ export const POSTransactionProvider = ({ children }) => {
         const discountedSubtotal = subtotal - discountAmount;
 
         const taxCalculation = calculateCartTax(state.items);
+
+            console.log('💰 Raw cannabis tax calculation:', taxCalculation);
+            console.log('💰 Tax calculation structure:', JSON.stringify(taxCalculation, null, 2));
+
+
         const taxAmount = taxCalculation.taxes.total;
 
         const grandTotal = discountedSubtotal + taxAmount;
@@ -214,10 +191,17 @@ export const POSTransactionProvider = ({ children }) => {
 
 const completeTransaction = async (receiptData) => {
     try {
+        const totals = calculateTotals();
+        console.log('💰 Transaction completion - Tax debugging:', {
+            calculatedTotals: totals,
+            taxBreakdown: totals.taxBreakdown,
+            taxAmount: totals.taxAmount
+        });
+
         const transaction = {
             transactionId: `TXN-${Date.now()}`,
             items: state.items,
-            totals: calculateTotals(),
+            totals: totals, // Make sure we're using the calculated totals
             discount: state.discount,
             paymentMethod: state.paymentMethod,
             cashReceived: state.cashReceived,
@@ -225,16 +209,22 @@ const completeTransaction = async (receiptData) => {
             receiptData
         };
 
+        console.log('💰 Transaction object before saving:', transaction);
+
         // Save to database
         const savedTransaction = await createTransaction(transaction);
         
+        console.log('💰 Transaction returned from database:', savedTransaction.transaction);
+
         // Create compatibility object for PaymentComplete component
         const compatibleTransaction = {
             ...savedTransaction.transaction,
-            id: savedTransaction.transaction.transactionId || savedTransaction.transaction._id, // Add 'id' for compatibility
-            timestamp: new Date(savedTransaction.transaction.createdAt) // Add timestamp for compatibility
+            id: savedTransaction.transaction.transactionId || savedTransaction.transaction._id,
+            timestamp: new Date(savedTransaction.transaction.createdAt)
         };
         
+        console.log('💰 Compatible transaction for receipt:', compatibleTransaction);
+
         dispatch({ type: 'COMPLETE_TRANSACTION', payload: compatibleTransaction });
         toast.success('Transaction completed successfully');
         return compatibleTransaction;

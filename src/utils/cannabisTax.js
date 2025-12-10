@@ -10,7 +10,7 @@ let taxConfig = {
     city: { enabled: true, rate: 0.5 },
   },
   cultivationTax: {
-    enabled: false,
+    enabled: true,
     ratePerGram: 0.10, // $0.10 per gram
   },
 };

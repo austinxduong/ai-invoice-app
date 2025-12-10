@@ -20,7 +20,8 @@ if (!receiptTransaction) {
   return null;
 }
 
-    console.log('🧾 ReceiptModal - About to render with transaction:', receiptTransaction);
+console.log('🧾 ReceiptModal - About to render with transaction:', receiptTransaction);
+
 
 
 // Helper functions to handle both transaction formats (localStorage vs database)
@@ -47,6 +48,16 @@ const getItems = () => {
 const getReceiptData = () => {
   return receiptTransaction.receiptData || {};
 };
+
+// Add debugging to see what tax data the receipt is getting
+console.log('🧾 Receipt debugging - Transaction data:', {
+    receiptTransaction,
+    totals: getTotals(),
+    taxBreakdown: getTotals().taxBreakdown,
+    taxAmount: getTotals().taxAmount,
+    fullTaxBreakdown: JSON.stringify(getTotals().taxBreakdown, null, 2)
+});
+
 
   // Rest of your existing ReceiptModal component code...
   const formatCurrency = (amount) => {
@@ -255,36 +266,32 @@ ${divider}
                   <span>{formatCurrency(getTotals().subtotal || 0)}</span>
                 </div>
                 
-                {getTotals().discountAmount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount:</span>
-                    <span>{formatCurrency(getTotals().discountAmount || 0)}</span>
+              {getTotals().taxBreakdown && (
+                <div className="space-y-2 text-sm border-t pt-2 mt-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cultivation Tax</span>
+                    <span>{formatCurrency(getTotals().taxBreakdown?.cultivation || 0)}</span>
                   </div>
-                )}
-                
-                {/* Detailed Tax Breakdown */}
-                {getTotals().taxBreakdown && (
-                  <div className="space-y-1 ml-2">
-                    {receiptTransaction.totals.taxBreakdown.excise > 0 && (
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>Cannabis Excise Tax:</span>
-                        <span>{formatCurrency(getTotals().taxBreakdown?.excise || 0)}</span>
-                      </div>
-                    )}
-                    {receiptTransaction.totals.taxBreakdown.sales?.total > 0 && (
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>Sales Tax:</span>
-                        <span>{formatCurrency(receiptTransaction.totals.taxBreakdown.sales.total)}</span>
-                      </div>
-                    )}
-                    {receiptTransaction.totals.taxBreakdown.cultivation > 0 && (
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>Cultivation Tax:</span>
-                        <span>{formatCurrency(receiptTransaction.totals.taxBreakdown.cultivation)}</span>
-                      </div>
-                    )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Excise Tax</span>
+                    <span>{formatCurrency(getTotals().taxBreakdown?.excise || 0)}</span>
                   </div>
-                )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">State Sales Tax</span>
+                    <span>{formatCurrency(getTotals().taxBreakdown?.sales?.state || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">County Sales Tax</span>
+                    <span>{formatCurrency(getTotals().taxBreakdown?.sales?.county || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">City Sales Tax</span>
+                    <span>{formatCurrency(getTotals().taxBreakdown?.sales?.city || 0)}</span>
+                  </div>
+                </div>
+              )}
+
+
                 
                 <div className="flex justify-between font-medium">
                   <span>Total Tax:</span>
