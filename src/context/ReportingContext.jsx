@@ -234,7 +234,7 @@ export const ReportingProvider = ({ children }) => {
             },
             summary: {
                 totalCashTransactions: cashTransactions.length,
-                totalCashReceived: cashTransactions.reduce((sum, t) => sum + (t.receiptData?.cashReceived || 0), 0),
+                totalCashReceived: cashTransactions.reduce((sum, t) => sum + (t.cashReceived || t.receiptData?.cashReceived || 0), 0),
                 totalChangeGiven: cashTransactions.reduce((sum, t) => sum + (t.totals.changeAmount || 0), 0),
                 averageTransactionValue: cashTransactions.length > 0 
                     ? cashTransactions.reduce((sum, t) => sum + t.totals.grandTotal, 0) / cashTransactions.length 
@@ -245,7 +245,7 @@ export const ReportingProvider = ({ children }) => {
                 id: transaction._id || transaction.id,
                 timestamp: transaction.createdAt || transaction.timestamp,
                 total: transaction.totals.grandTotal,
-                cashReceived: transaction.receiptData?.cashReceived || 0,
+                cashReceived: transaction.cashReceived || transaction.receiptData?.cashReceived || 0,
                 change: transaction.totals.changeAmount || 0,
                 items: transaction.items.length,
                 customer: transaction.customerInfo?.name || 'Walk-in'

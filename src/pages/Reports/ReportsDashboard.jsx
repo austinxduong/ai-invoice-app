@@ -214,6 +214,7 @@ const ReportsDashboard = () => {
 
           {activeReport === 'cash-report' && (
             <CashReport 
+              key={`${selectedDateRange.startDate.toISOString()}-${selectedDateRange.endDate.toISOString()}`}
               dateRange={selectedDateRange}
               generateCashReport={generateCashReport}
             />
@@ -389,6 +390,7 @@ const TaxReport = ({ monthlyTax }) => (
   </div>
 );
 
+
 const ProductPerformanceReport = ({ dateRange, generateProductPerformance }) => {
   const productData = generateProductPerformance(dateRange.startDate, dateRange.endDate);
 
@@ -437,6 +439,7 @@ const ProductPerformanceReport = ({ dateRange, generateProductPerformance }) => 
 
 const CashReport = ({ dateRange, generateCashReport }) => {
   const cashData = generateCashReport(dateRange.startDate, dateRange.endDate);
+  
 
   return (
     <div className="space-y-6">
