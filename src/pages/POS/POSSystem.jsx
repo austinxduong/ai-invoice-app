@@ -13,21 +13,25 @@ const POSSystem = () => {
   const [completedTransaction, setCompletedTransaction] = useState(null);
 
 const handlePaymentComplete = async (transactionPromise) => {
-  try {
-    console.log('💳 Payment processing...');
-    
-    // Wait for the transaction Promise to resolve
-    const transaction = await transactionPromise;
-    
-    console.log('💳 Payment completed, showing receipt for:', transaction);
-    setCompletedTransaction(transaction);
-    setCurrentView('products');
-    setShowReceiptModal(true);
-    
-  } catch (error) {
-    console.error('❌ Error completing payment:', error);
-    // Handle error - maybe show error toast
-  }
+    try {
+        console.log('💳 Payment processing...');
+        
+        // Wait for the transaction Promise to resolve
+        const transaction = await transactionPromise;
+        
+        console.log('💳 Payment completed, showing receipt for:', transaction);
+        
+        if (transaction) {
+            setCompletedTransaction(transaction);
+            setCurrentView('products');
+            setShowReceiptModal(true);
+        } else {
+            console.error('❌ No transaction received');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error completing payment:', error);
+    }
 };
 
 

@@ -190,32 +190,15 @@ export const POSTransactionProvider = ({ children }) => {
     },[]);
 
 const completeTransaction = async (receiptData) => {
-    const now = new Date();
-    const localTimestamp = new Date(
-        now.getFullYear(),
-        now.getMonth(), 
-        now.getDate(),
-        now.getHours(),
-        now.getMinutes(),
-        now.getSeconds(),
-        now.getMilliseconds()
-    );
-
-// Store as local ISO string
-    const localTimestampString = localTimestamp.toISOString();
-    
     try {
         const totals = calculateTotals();
         
-        const now = new Date();
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        
-        // Create local time by adjusting for timezone offset
-        const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
-        
+        const uiTimestamp = new Date();
+        const localTimestamp = new Date(uiTimestamp.getTime() - (uiTimestamp.getTimezoneOffset() * 60000));
+
         const transaction = {
             transactionId: `TXN-${Date.now()}`,
-            timestamp: localTime, // Local timestamp
+            timestamp: localTimestamp,
             items: state.items,
             totals: totals,
             discount: state.discount,
@@ -224,33 +207,36 @@ const completeTransaction = async (receiptData) => {
             customerInfo: state.customerInfo,
             receiptData: {
                 ...receiptData,
-                timestamp: localTime,
-                localDateString: now.toLocaleDateString('en-US', {
-                    timeZone: userTimezone,
-                    year: 'numeric',
-                    month: '2-digit', 
-                    day: '2-digit'
-                }),
-                localTimeString: now.toLocaleTimeString('en-US', {
-                    timeZone: userTimezone
-                }),
-                timezone: userTimezone,
-                timezoneOffset: now.getTimezoneOffset() // Save offset in minutes
+                timestamp: localTimestamp,
+                localDateString: uiTimestamp.toLocaleDateString('en-US'),
+                localTimeString: uiTimestamp.toLocaleTimeString('en-US'),
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timezoneOffset: uiTimestamp.getTimezoneOffset()
             }
         };
 
-        console.log('💰 Transaction with local time:', {
-            localTime,
-            timezone: userTimezone,
-            localDateString: transaction.receiptData.localDateString
-        });
+        console.log('💰 Transaction object before saving:', transaction);
 
         // Save to database
         const savedTransaction = await createTransaction(transaction);
         
-        // Rest of your existing code...
+        console.log('💰 Transaction returned from database:', savedTransaction.transaction);
+
+        // Create compatibility object for PaymentComplete component
+        const compatibleTransaction = {
+            ...savedTransaction.transaction,
+            id: savedTransaction.transaction.transactionId || savedTransaction.transaction._id
+        };
+        
+        console.log('💰 Returning transaction for receipt:', compatibleTransaction);
+
+        dispatch({ type: 'COMPLETE_TRANSACTION', payload: compatibleTransaction });
+        toast.success('Transaction completed successfully');
+        return compatibleTransaction; // Make sure this returns the transaction
+
     } catch (error) {
         console.error('Transaction failed:', error);
+        toast.error(`Transaction failed: ${error.message}`);
         throw error;
     }
 };

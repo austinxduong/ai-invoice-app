@@ -58,6 +58,11 @@ console.log('🧾 Receipt debugging - Transaction data:', {
     fullTaxBreakdown: JSON.stringify(getTotals().taxBreakdown, null, 2)
 });
 
+console.log('🧾 Receipt Debug - Raw transaction:', receiptTransaction);
+console.log('🧾 Receipt Debug - Has totals?', !!receiptTransaction?.totals);
+console.log('🧾 Receipt Debug - Has items?', !!receiptTransaction?.items);
+console.log('🧾 Receipt Debug - Transaction keys:', Object.keys(receiptTransaction || {}));
+
 
   // Rest of your existing ReceiptModal component code...
   const formatCurrency = (amount) => {

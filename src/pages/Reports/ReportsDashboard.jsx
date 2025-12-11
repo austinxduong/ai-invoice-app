@@ -72,12 +72,28 @@ const ReportsDashboard = () => {
     { id: 'cash-report', name: 'Cash Transactions', icon: FileBarChart },
   ];
 
-  const handleDateRangeChange = (field, value) => {
-    setSelectedDateRange(prev => ({
+const handleDateRangeChange = (field, value) => {
+  console.log('📅 Date picker input received:', { field, value });
+  
+  // Create date without timezone conversion issues
+  const [year, month, day] = value.split('-');
+  const newDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  
+  console.log('📅 Date picker - field:', field);
+  console.log('📅 Date picker - value:', value);
+  console.log('📅 Date picker - newDate:', newDate);
+  
+  setSelectedDateRange(prev => {
+    const updated = {
       ...prev,
-      [field]: new Date(value)
-    }));
-  };
+      [field]: newDate
+    };
+    
+    console.log('📅 Date picker - updated selectedDateRange:', updated);
+    
+    return updated;
+  });
+};
 
   const exportReport = (reportType) => {
     let data = [];
