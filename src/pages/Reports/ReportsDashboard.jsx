@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -20,17 +20,50 @@ const ReportsDashboard = () => {
     getThisMonthTax,
     generateProductPerformance,
     generateCashReport,
-    exportToCSV
+    exportToCSV,
+    transactions // ✅ ADD THIS - import transactions from context
   } = useReporting();
 
   const [activeReport, setActiveReport] = useState('overview');
 
-  // Get today's data for quick overview
-  console.log('🎯 ReportsDashboard: Getting today sales...');
-  const todaysSales = getTodaysSales();
-  console.log('🎯 ReportsDashboard: Today sales result:', todaysSales);
-  const monthlyTax = getThisMonthTax();
-  console.log('🎯 ReportsDashboard: Monthly tax result:', monthlyTax);
+  // ✅ FIXED: Initialize with default structure to prevent undefined errors
+  const [todaysSales, setTodaysSales] = useState({
+    grossSales: 0,
+    netSales: 0,
+    totalTax: 0,
+    transactionCount: 0,
+    itemsSold: 0,
+    transactions: []
+  });
+
+  const [monthlyTax, setMonthlyTax] = useState({
+    summary: {
+      totalTaxCollected: 0,
+      exciseTaxCollected: 0,
+      salesTaxCollected: 0,
+      totalTransactions: 0
+    },
+    dailyBreakdown: []
+  });
+
+  // ✅ FIXED: Use transactions from context and add error handling
+  useEffect(() => {
+    try {
+      const salesData = getTodaysSales();
+      setTodaysSales(salesData);
+    } catch (error) {
+      console.error('Error getting today\'s sales:', error);
+    }
+  }, [transactions, getTodaysSales]); // ✅ Add getTodaysSales to dependencies
+
+  useEffect(() => {
+    try {
+      const taxData = getThisMonthTax();
+      setMonthlyTax(taxData);
+    } catch (error) {
+      console.error('Error getting monthly tax:', error);
+    }
+  }, [transactions, getThisMonthTax]); // ✅ Add getThisMonthTax to dependencies
 
   // Quick stats for dashboard
   const quickStats = [

@@ -6,24 +6,50 @@ const ReportingContext = createContext();
 export const ReportingProvider = ({ children }) => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [totalTransactions, setTotalTransactions] = useState(0);
     const [selectedDateRange, setSelectedDateRange] = useState({
         startDate: new Date(new Date().setDate(1)), // First day of current month
         endDate: new Date()
     });
 
+
     // Load transactions from database
     const loadTransactions = async (filters = {}) => {
+        console.log('🔍 Frontend: loadTransactions called with:', {
+            startDate: selectedDateRange.startDate.toISOString(),
+            endDate: selectedDateRange.endDate.toISOString()
+        });
+        
+        setLoading(true);
+        setError(null);
+
         try {
-            setLoading(true);
             console.log('📊 Loading transactions from database...');
+            
+        console.log('🔍 Frontend: About to call fetchTransactions with params:', {
+                startDate: selectedDateRange.startDate.toISOString(),
+                endDate: selectedDateRange.endDate.toISOString(),
+                paymentMethod: 'cash',
+                status: 'completed',
+                ...filters
+            });
             
             const result = await fetchTransactions({
                 startDate: selectedDateRange.startDate.toISOString(),
                 endDate: selectedDateRange.endDate.toISOString(),
+                paymentMethod: 'cash',
+                status: 'completed',
                 ...filters
             });
             
+            console.log('🔍 Frontend: fetchTransactions completed successfully, result:', {
+                transactionsCount: result.transactions?.length || 0,
+                total: result.total || 0
+            });
+            
             setTransactions(result.transactions || []);
+            setTotalTransactions(result.total || 0);
             console.log('📊 Loaded transactions from DB:', result.transactions?.length || 0);
             
         } catch (error) {
@@ -36,13 +62,16 @@ export const ReportingProvider = ({ children }) => {
 
     // Load transactions when date range changes
     useEffect(() => {
-        loadTransactions();
+        console.log('🔍 Frontend: useEffect triggered, selectedDateRange:', selectedDateRange);
+        
+        // Debounce API calls to prevent race conditions
+        const timeoutId = setTimeout(() => {
+            loadTransactions();
+        }, 100); // 100ms delay to batch rapid state changes
+        
+        return () => clearTimeout(timeoutId);
     }, [selectedDateRange]);
 
-    // Load transactions on component mount
-    useEffect(() => {
-        loadTransactions();
-    }, []);
 
     // Filter transactions by date range (now uses database transactions)
     const getTransactionsInRange = (startDate, endDate, transactionList = transactions) => {

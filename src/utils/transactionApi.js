@@ -35,35 +35,50 @@ export const createTransaction = async (transactionData) => {
     }
 };
 
-// Fetch transactions with filtering
-export const fetchTransactions = async (filters = {}) => {
+// UPDATE the function signature and fetch call:
+// Fetch transactions from database
+export const fetchTransactions = async (params = {}) => {
     try {
-        console.log('📊 Fetching transactions with filters:', filters);
-
+        console.log('🔍 API: fetchTransactions called with params:', params);
+        
         const queryParams = new URLSearchParams();
-
-        Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-                queryParams.append(key, value);
-            }
-        });
-
+        
+        // Build query parameters
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.paymentMethod) queryParams.append('paymentMethod', params.paymentMethod);
+        if (params.status) queryParams.append('status', params.status);
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+        if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        
+        console.log('🔍 API: Making request to:', `${API_URL}/api/transactions?${queryParams}`);
+        
         const response = await fetch(`${API_URL}/api/transactions?${queryParams}`, {
+            method: 'GET',
             headers: getAuthHeaders()
         });
 
         if (!response.ok) {
-            throw new Error('Failed to fetch transactions');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const result = await response.json();
-        console.log('✅ Fetched transactions:', result.transactions?.length || 0, 'transactions');
-        return result;
-
+        console.log('🔍 API: fetchTransactions response:', {
+            transactionsCount: result.transactions?.length || 0,
+            total: result.pagination?.total || 0
+        });
+        
+        return {
+            transactions: result.transactions || [],
+            total: result.pagination?.total || 0,
+            pagination: result.pagination || {}
+        };
+        
     } catch (error) {
-        console.error('❌ Error fetching transactions:', error);
-        // Return empty result to prevent crashes
-        return { transactions: [] };
+        console.error('❌ API: Failed to fetch transactions:', error);
+        throw new Error('Failed to fetch transactions');
     }
 };
 
