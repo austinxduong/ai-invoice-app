@@ -286,7 +286,8 @@ const getTransactionsInRange = (startDate, endDate, transactionList = transactio
             },
             transactions: cashTransactions.map(transaction => ({
                 id: transaction._id || transaction.id,
-                timestamp: transaction.createdAt || transaction.timestamp,
+                localDate: transaction.receiptData?.localDateString || '',
+                localTime: transaction.receiptData?.localTimeString || '',
                 total: transaction.totals.grandTotal,
                 cashReceived: transaction.cashReceived || transaction.receiptData?.cashReceived || 0,
                 change: transaction.totals.changeAmount || 0,
