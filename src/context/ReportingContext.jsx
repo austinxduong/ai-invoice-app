@@ -4,14 +4,19 @@ import { fetchTransactions } from '../utils/transactionApi';
 const ReportingContext = createContext();
 
 export const ReportingProvider = ({ children }) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [totalTransactions, setTotalTransactions] = useState(0);
     const [selectedDateRange, setSelectedDateRange] = useState({
-        startDate: new Date(new Date().setDate(1)), // First day of current month
-        endDate: new Date()
-    });
+    startDate: firstDayOfMonth,
+    endDate: today
+});
 
 
     // Load transactions from database
