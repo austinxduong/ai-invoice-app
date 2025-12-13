@@ -367,9 +367,9 @@ const DailySalesReport = ({ todaysSales }) => (
               {todaysSales.transactions.slice(0, 10).map(transaction => (
                 <tr key={transaction.id}>
                   <td className="px-4 py-2 text-sm text-gray-900">
-                    {transaction.toLocaleDateString} {transaction.toLocaleTimeString}
+                    {transaction.receiptData?.localTimeString || ''}
                   </td>
-                  <td className="px-4 py-2 text-sm text-gray-900">{transaction.id}</td>
+                  <td className="px-4 py-2 text-sm text-gray-900">{transaction.transactionId}</td>
                   <td className="px-4 py-2 text-sm text-gray-900">{transaction.items.length}</td>
                   <td className="px-4 py-2 text-sm text-gray-900">${transaction.totals.grandTotal.toFixed(2)}</td>
                   <td className="px-4 py-2 text-sm text-gray-900">${transaction.totals.taxAmount.toFixed(2)}</td>
