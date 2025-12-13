@@ -68,6 +68,15 @@ remote login - "error occurred during login"
             'x-forwarded-host': 'abc123.ngrok-free.dev',
             'host': 'abc123.ngrok-free.dev',
             'origin': undefined  // ← Missing!
+        
+        Reports:
+        - The API was right.
+        - The database was right.
+        - The UI was accidentally filtering out valid data using UTC timestamps.
+
+        endDate filtering:
+        - startDate defauld was not normalized to a calendar day (local midnight etc. 00:00:00)
+            - the date ranges inlcude the selected end date
         }
 ```
 
