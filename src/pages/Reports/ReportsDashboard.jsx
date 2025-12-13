@@ -367,7 +367,7 @@ const DailySalesReport = ({ todaysSales }) => (
               {todaysSales.transactions.slice(0, 10).map(transaction => (
                 <tr key={transaction.id}>
                   <td className="px-4 py-2 text-sm text-gray-900">
-                    {new Date(transaction.timestamp).toLocaleTimeString()}
+                    {transaction.toLocaleDateString} {transaction.toLocaleTimeString}
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-900">{transaction.id}</td>
                   <td className="px-4 py-2 text-sm text-gray-900">{transaction.items.length}</td>
@@ -536,7 +536,7 @@ const CashReport = ({ dateRange, generateCashReport }) => {
               {cashData.transactions.slice(0, 50).map(transaction => (
                 <tr key={transaction.id}>
                   <td className="px-4 py-2 text-sm text-gray-900">
-                    {new Date(transaction.timestamp).toLocaleDateString()} {new Date(transaction.timestamp).toLocaleTimeString()}
+                    {transaction.localDate} {transaction.localTime}
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-900">{transaction.id}</td>
                   <td className="px-4 py-2 text-sm text-gray-900">${transaction.total.toFixed(2)}</td>
