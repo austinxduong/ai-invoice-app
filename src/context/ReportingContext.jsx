@@ -74,12 +74,21 @@ export const ReportingProvider = ({ children }) => {
 
 
     // Filter transactions by date range (now uses database transactions)
-    const getTransactionsInRange = (startDate, endDate, transactionList = transactions) => {
-        return transactionList.filter(transaction => {
-            const transactionDate = new Date(transaction.createdAt || transaction.timestamp);
-            return transactionDate >= startDate && transactionDate <= endDate;
-        });
-    };
+const getTransactionsInRange = (startDate, endDate, transactionList = transactions) => {
+    const datesInRange = [];
+    const current = new Date(startDate);
+
+    while (current <= endDate) {
+        datesInRange.push(
+            current.toLocaleDateString('en-US')
+        );
+        current.setDate(current.getDate() + 1);
+    }
+
+    return transactionList.filter(transaction =>
+        datesInRange.includes(transaction.receiptData?.localDateString)
+    );
+};
 
     // Daily Sales Summary (updated to use database data)
     const generateDailySalesSummary = (date = new Date()) => {
