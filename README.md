@@ -68,16 +68,29 @@ remote login - "error occurred during login"
             'x-forwarded-host': 'abc123.ngrok-free.dev',
             'host': 'abc123.ngrok-free.dev',
             'origin': undefined  // ← Missing!
-        
-        Reports:
-        - The API was right.
-        - The database was right.
-        - The UI was accidentally filtering out valid data using UTC timestamps.
-
-        endDate filtering:
-        - startDate defauld was not normalized to a calendar day (local midnight etc. 00:00:00)
-            - the date ranges inlcude the selected end date
         }
+        
+Business Reports:
+    - The API was right.
+    - The database was right.
+    - The UI was accidentally filtering out valid data using UTC timestamps.
+
+    (cash transactions report)
+    - date/time now appear
+        - localDate: transaction.receiptData?.localDateString || '',
+        - localTime: transaction.receiptData?.localTimeString || '',
+    - endDate filtering
+        - startDate default was not normalized to a calendar day (local midnight etc. 00:00:00)
+            - the date ranges inlcude the selected end date
+
+    
+    (daily sales report)
+    - time columns now appear
+        - {transaction.localTime}
+    - transaction id now appear
+        - {transaction.localDate} 
+        
+        
 ```
 
 
