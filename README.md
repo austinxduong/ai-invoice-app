@@ -89,6 +89,11 @@ Business Reports:
         - {transaction.localTime}
     - transaction id now appear
         - {transaction.localDate} 
+
+Homepage redirect:
+    - when refreshing on a route, user is redirected to to homepage
+    - when refreshing on a route, user is redirected to a blank page: etc. route/index.html
+        - source /*, destination /index.html, action: Rewrite
         
         
 ```
