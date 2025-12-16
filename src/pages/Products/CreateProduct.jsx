@@ -389,6 +389,8 @@ const generateSKU = () => {
               </div>
             )}
 
+            
+
             {/* Section Content */}
             {currentSection === 'basic' && (
             <BasicInfoSection 
@@ -425,6 +427,7 @@ const generateSKU = () => {
                 formData={formData}
                 updateField={updateField}
                 availableEffects={availableEffects}
+                validationErrors={validationErrors}
             />
             )}
 
@@ -480,6 +483,164 @@ const generateSKU = () => {
             </div>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// Image Upload Component
+const ImageUploadField = ({ images, updateField, validationErrors }) => {
+  const [previews, setPreviews] = useState(images.map(img => img.url || ''));
+  
+  const handleImageUpload = (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be less than 5MB');
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const newPreviews = [...previews];
+      newPreviews[index] = e.target.result;
+      setPreviews(newPreviews);
+
+      // Update form data
+      const newImages = [...images];
+      newImages[index] = {
+        url: e.target.result, // Base64 data URL
+        alt: `${file.name}`
+      };
+      updateField('images', newImages);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addImageSlot = () => {
+    const newImages = [...images, { url: '', alt: '' }];
+    const newPreviews = [...previews, ''];
+    updateField('images', newImages);
+    setPreviews(newPreviews);
+  };
+
+  const removeImage = (index) => {
+    const newImages = images.filter((_, i) => i !== index);
+    const newPreviews = previews.filter((_, i) => i !== index);
+    updateField('images', newImages);
+    setPreviews(newPreviews);
+  };
+
+  const updateAltText = (index, alt) => {
+    const newImages = [...images];
+    newImages[index] = { ...newImages[index], alt };
+    updateField('images', newImages);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium text-gray-700">Product Images</h3>
+        <button
+          type="button"
+          onClick={addImageSlot}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm transition-colors"
+        >
+          + Add Image
+        </button>
+      </div>
+
+      {images.length === 0 && (
+        <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+          <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p className="mt-2 text-sm text-gray-600">No images added yet</p>
+          <button
+            type="button"
+            onClick={addImageSlot}
+            className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            Add your first image
+          </button>
+        </div>
+      )}
+
+      {images.map((image, index) => (
+        <div key={index} className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-start space-x-4">
+            {/* Image Preview */}
+            <div className="flex-shrink-0">
+              {previews[index] ? (
+                <img
+                  src={previews[index]}
+                  alt={`Preview ${index + 1}`}
+                  className="w-24 h-24 object-cover rounded-lg border"
+                />
+              ) : (
+                <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            {/* Upload Controls */}
+            <div className="flex-1 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Upload Image
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, index)}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Alt Text (for accessibility)
+                </label>
+                <input
+                  type="text"
+                  value={image.alt}
+                  onChange={(e) => updateAltText(index, e.target.value)}
+                  placeholder="Describe this image..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Remove Button */}
+            <button
+              type="button"
+              onClick={() => removeImage(index)}
+              className="flex-shrink-0 text-red-600 hover:text-red-700 p-1"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ))}
+
+      <div className="text-sm text-gray-500">
+        <p>• Supported formats: JPG, PNG, GIF, WebP</p>
+        <p>• Maximum file size: 5MB</p>
+        <p>• Recommended dimensions: 800x800px or larger</p>
       </div>
     </div>
   );
@@ -722,10 +883,18 @@ const PricingSection = ({ formData, updateField, units, inventoryUnits, addPrici
   </div>
 );
 
-const DetailsSection = ({ formData, updateField, availableEffects }) => (
+const DetailsSection = ({ formData, updateField, availableEffects, validationErrors }) => (
   <div className="space-y-6">
     <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Product Details</h2>
     
+    {/* Images Section */}
+    <ImageUploadField
+      images={formData.images}
+      updateField={updateField}
+      validationErrors={validationErrors}
+    />
+    
+    {/* Effects Section */}
     <div>
       <h3 className="text-lg font-medium text-gray-700 mb-4">Effects</h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -749,6 +918,7 @@ const DetailsSection = ({ formData, updateField, availableEffects }) => (
       </div>
     </div>
     
+    {/* Flavors Section */}
     <div>
       <h3 className="text-lg font-medium text-gray-700 mb-4">Flavors</h3>
       <p className="text-sm text-gray-600 mb-2">Enter flavors separated by commas</p>
