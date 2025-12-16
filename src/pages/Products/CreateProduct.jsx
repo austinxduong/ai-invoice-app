@@ -92,6 +92,66 @@ const validateField = (fieldPath, value) => {
   setValidationErrors(errors);
 };
 
+// Validate specific sections
+const validateSection = (sectionId) => {
+  const errors = {};
+  
+  switch (sectionId) {
+    case 'basic':
+      if (!formData.name?.trim()) {
+        errors.name = 'Product name is required';
+      }
+      
+      if (!formData.sku?.trim()) {
+        errors.sku = 'SKU is required';
+      }
+      
+      if (!formData.category) {
+        errors.category = 'Category is required';
+      }
+      
+      // For flower, edible, concentrate, and pre-roll - subcategory is required
+      const categoriesRequiringSubcategory = ['flower', 'edible', 'concentrate', 'pre-roll'];
+      if (categoriesRequiringSubcategory.includes(formData.category) && !formData.subcategory) {
+        errors.subcategory = 'Subcategory is required for this product type';
+      }
+      break;
+      
+    case 'pricing':
+      // Pricing Validation - at least one valid pricing option required
+      const validPricingOptions = formData.pricing.filter(p => p.weight && p.price && p.weight > 0 && p.price > 0);
+      if (validPricingOptions.length === 0) {
+        errors.pricing = 'At least one pricing option with weight and price is required';
+      }
+      
+      // Inventory Validation
+      if (formData.inventory.currentStock === '' || formData.inventory.currentStock < 0) {
+        errors['inventory.currentStock'] = 'Current stock must be 0 or greater';
+      }
+      break;
+      
+    case 'compliance':
+      if (!formData.compliance.batchNumber?.trim()) {
+        errors['compliance.batchNumber'] = 'Batch number is required';
+      }
+      break;
+      
+    // No validation needed for cannabinoids and details sections
+    case 'cannabinoids':
+    case 'details':
+    default:
+      break;
+  }
+  
+  return errors;
+};
+
+// Check if current section is valid
+const isSectionValid = (sectionId) => {
+  const sectionErrors = validateSection(sectionId);
+  return Object.keys(sectionErrors).length === 0;
+};
+
 // Helper function to convert field paths to display names
 const getFieldDisplayName = (fieldPath) => {
   const displayNames = {
@@ -328,12 +388,37 @@ const generateSKU = () => {
   };
 
   // Navigation between sections
-  const nextSection = () => {
-    const currentIndex = sections.findIndex(s => s.id === currentSection);
-    if (currentIndex < sections.length - 1) {
-      setCurrentSection(sections[currentIndex + 1].id);
-    }
-  };
+const nextSection = () => {
+  const currentIndex = sections.findIndex(s => s.id === currentSection);
+  
+  // Validate current section before moving to next
+  const sectionErrors = validateSection(currentSection);
+  
+  if (Object.keys(sectionErrors).length > 0) {
+    // Update validation errors to show what needs to be fixed
+    setValidationErrors(prev => ({
+      ...prev,
+      ...sectionErrors
+    }));
+    
+    // Show error message
+    setError(`Please complete all required fields in the ${sections[currentIndex].name} section before continuing.`);
+    return; // Don't proceed to next section
+  }
+  
+  // Clear any existing errors for this section since it's valid
+  setError('');
+  const clearedErrors = { ...validationErrors };
+  Object.keys(sectionErrors).forEach(key => {
+    delete clearedErrors[key];
+  });
+  setValidationErrors(clearedErrors);
+  
+  // Move to next section
+  if (currentIndex < sections.length - 1) {
+    setCurrentSection(sections[currentIndex + 1].id);
+  }
+};
 
   const previousSection = () => {
     const currentIndex = sections.findIndex(s => s.id === currentSection);
@@ -1001,14 +1086,81 @@ const ComplianceSection = ({ formData, updateField, validationErrors }) => (
 );
 
 const ReviewSection = ({ formData, validationErrors, getFieldDisplayName }) => {
-  const errors = validationErrors ? Object.keys(validationErrors) : [];
+  // Safely calculate validation without calling validateSection during render
+  const checkBasicSection = () => {
+    const errors = {};
+    if (!formData.name?.trim()) errors.name = 'Product name is required';
+    if (!formData.sku?.trim()) errors.sku = 'SKU is required';
+    if (!formData.category) errors.category = 'Category is required';
+    
+    const categoriesRequiringSubcategory = ['flower', 'edible', 'concentrate', 'pre-roll'];
+    if (categoriesRequiringSubcategory.includes(formData.category) && !formData.subcategory) {
+      errors.subcategory = 'Subcategory is required for this product type';
+    }
+    return errors;
+  };
+
+  const checkPricingSection = () => {
+    const errors = {};
+    
+    // Fixed validation logic - convert to numbers and check for valid values
+    const validPricingOptions = formData.pricing.filter(p => {
+      const weight = Number(p.weight);
+      const price = Number(p.price);
+      
+      // Check that both weight and price exist, are numbers, and are greater than 0
+      return !isNaN(weight) && weight > 0 && !isNaN(price) && price > 0;
+    });
+    
+    if (validPricingOptions.length === 0) {
+      errors.pricing = 'At least one pricing option with weight and price is required';
+    }
+    
+    // Fix inventory validation too
+    const currentStock = Number(formData.inventory.currentStock);
+    if (isNaN(currentStock) || currentStock < 0) {
+      errors['inventory.currentStock'] = 'Current stock must be 0 or greater';
+    }
+    
+    return errors;
+  };
+
+  const checkComplianceSection = () => {
+    const errors = {};
+    if (!formData.compliance.batchNumber?.trim()) {
+      errors['compliance.batchNumber'] = 'Batch number is required';
+    }
+    return errors;
+  };
+
+  // Calculate all current section errors
+  const allSectionErrors = {
+    ...checkBasicSection(),
+    ...checkPricingSection(),
+    ...checkComplianceSection()
+  };
+  
+  // FIXED: Only show errors that are BOTH in validationErrors AND allSectionErrors
+  // This prevents showing stale errors when current validation passes
+  const currentErrors = {};
+  if (validationErrors) {
+    Object.keys(validationErrors).forEach(key => {
+      // Only include the error if it ALSO exists in current validation
+      if (allSectionErrors[key]) {
+        currentErrors[key] = validationErrors[key];
+      }
+    });
+  }
+  
+  const errors = Object.keys(currentErrors);
   const hasErrors = errors.length > 0;
+  const allSectionsValid = Object.keys(allSectionErrors).length === 0;
   
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Review & Submit</h2>
       
-      {/* Validation Errors Summary */}
+      {/* Validation Errors Summary - Only show current errors */}
       {hasErrors && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center mb-2">
@@ -1027,7 +1179,34 @@ const ReviewSection = ({ formData, validationErrors, getFieldDisplayName }) => {
             <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
               {errors.map(fieldPath => (
                 <li key={fieldPath} className="text-red-600">
-                  <span className="font-medium">{getFieldDisplayName ? getFieldDisplayName(fieldPath) : fieldPath}:</span> {validationErrors[fieldPath]}
+                  <span className="font-medium">{getFieldDisplayName ? getFieldDisplayName(fieldPath) : fieldPath}:</span> {currentErrors[fieldPath]}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+      
+      {/* Show errors from other sections that aren't in current validationErrors */}
+      {!hasErrors && !allSectionsValid && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center mb-2">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800">
+                Please complete all required fields in previous sections:
+              </h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+              {Object.keys(allSectionErrors).map(fieldPath => (
+                <li key={fieldPath} className="text-yellow-600">
+                  <span className="font-medium">{getFieldDisplayName ? getFieldDisplayName(fieldPath) : fieldPath}:</span> {allSectionErrors[fieldPath]}
                 </li>
               ))}
             </ul>
@@ -1038,28 +1217,48 @@ const ReviewSection = ({ formData, validationErrors, getFieldDisplayName }) => {
       {/* Product Summary */}
       <div className="bg-gray-50 rounded-lg p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className={validationErrors?.name ? 'text-red-600' : ''}>
+          <div className={allSectionErrors?.name ? 'text-red-600' : ''}>
             <strong>Name:</strong> {formData.name || <em className="text-red-500">Required</em>}
           </div>
-          <div className={validationErrors?.sku ? 'text-red-600' : ''}>
+          <div className={allSectionErrors?.sku ? 'text-red-600' : ''}>
             <strong>SKU:</strong> {formData.sku || <em className="text-red-500">Required</em>}
           </div>
-          <div className={validationErrors?.category ? 'text-red-600' : ''}>
+          <div className={allSectionErrors?.category ? 'text-red-600' : ''}>
             <strong>Category:</strong> {formData.category || <em className="text-red-500">Required</em>}
           </div>
-          <div className={validationErrors?.subcategory ? 'text-red-600' : ''}>
+          <div className={allSectionErrors?.subcategory ? 'text-red-600' : ''}>
             <strong>Subcategory:</strong> {formData.subcategory || <em className="text-red-500">Required</em>}
           </div>
-          <div className={validationErrors?.['compliance.batchNumber'] ? 'text-red-600' : ''}>
+          <div className={allSectionErrors?.['compliance.batchNumber'] ? 'text-red-600' : ''}>
             <strong>Batch Number:</strong> {formData.compliance.batchNumber || <em className="text-red-500">Required</em>}
           </div>
-          <div className={validationErrors?.pricing ? 'text-red-600' : ''}>
+          <div className={allSectionErrors?.pricing ? 'text-red-600' : ''}>
             <strong>Pricing Options:</strong> {formData.pricing?.filter(p => p.weight && p.price).length || <em className="text-red-500">At least 1 required</em>}
           </div>
         </div>
+        
+        {/* Images Preview in Review */}
+        {formData.images && formData.images.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mb-2">
+              <strong>Images:</strong> {formData.images.filter(img => img.url).length} uploaded
+            </div>
+            <div className="flex space-x-2 overflow-x-auto">
+              {formData.images.filter(img => img.url).map((image, index) => (
+                <img
+                  key={index}
+                  src={image.url}
+                  alt={image.alt || `Product image ${index + 1}`}
+                  className="w-16 h-16 object-cover rounded border flex-shrink-0"
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
-      {!hasErrors && (
+      {/* Success Message - Only show when ALL sections are valid */}
+      {allSectionsValid && !hasErrors && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 text-sm">
             ✅ All required fields are complete. Your product is ready to be created!
