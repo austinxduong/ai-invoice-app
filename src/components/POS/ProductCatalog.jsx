@@ -3,8 +3,12 @@ import { X, Star, Package, Info } from 'lucide-react';
 import { productApi } from '../../services/productApi';
 import { useCart } from '../../context/CartContext'; 
 import ProductCard from './ProductCard';
+import { useNavigate } from 'react-router-dom';
+
 
 const ProductCatalog = () => {
+
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,7 +17,7 @@ const ProductCatalog = () => {
     search: '',
     inStock: false
   });
-
+const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [pagination, setPagination] = useState({
@@ -116,10 +120,19 @@ const handleAddToCart = (product, selectedPricing = null) => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Cannabis Product Catalog</h1>
         <p className="text-gray-600">Browse our selection of lab-tested cannabis products</p>
       </div>
+
+        <button
+          onClick={() => navigate('/products/new')}
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 mb-5 rounded-lg font-medium transition-colors flex items-center space-x-2"
+          >
+          <span>+</span>
+          <span>Add New Product</span>
+        </button>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
@@ -438,6 +451,7 @@ const handleAddToCart = (product, selectedPricing = null) => {
                   >
                     Close
                   </button>
+                  
                   <button
                     onClick={() => {
                       handleAddToCart(selectedProduct);
