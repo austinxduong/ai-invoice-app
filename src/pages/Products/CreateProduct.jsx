@@ -14,6 +14,97 @@ const CreateProduct = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentSection, setCurrentSection] = useState('basic');
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // Validation rules
+const validateForm = () => {
+  const errors = {};
+  
+  // Basic Info Validation
+  if (!formData.name?.trim()) {
+    errors.name = 'Product name is required';
+  }
+  
+  if (!formData.sku?.trim()) {
+    errors.sku = 'SKU is required';
+  }
+  
+  if (!formData.category) {
+    errors.category = 'Category is required';
+  }
+  
+  // For flower, edible, concentrate, and pre-roll - subcategory is required
+  const categoriesRequiringSubcategory = ['flower', 'edible', 'concentrate', 'pre-roll'];
+  if (categoriesRequiringSubcategory.includes(formData.category) && !formData.subcategory) {
+    errors.subcategory = 'Subcategory is required for this product type';
+  }
+  
+  // Compliance Validation
+  if (!formData.compliance.batchNumber?.trim()) {
+    errors['compliance.batchNumber'] = 'Batch number is required';
+  }
+  
+  // Pricing Validation - at least one valid pricing option required
+  const validPricingOptions = formData.pricing.filter(p => p.weight && p.price && p.weight > 0 && p.price > 0);
+  if (validPricingOptions.length === 0) {
+    errors.pricing = 'At least one pricing option with weight and price is required';
+  }
+  
+  // Inventory Validation
+  if (formData.inventory.currentStock === '' || formData.inventory.currentStock < 0) {
+    errors['inventory.currentStock'] = 'Current stock must be 0 or greater';
+  }
+  
+  return errors;
+};
+
+// Real-time validation when fields change
+const validateField = (fieldPath, value) => {
+  const errors = { ...validationErrors };
+  
+  // Remove existing error if field becomes valid
+  delete errors[fieldPath];
+  
+  // Basic validations
+  if (fieldPath === 'name' && !value?.trim()) {
+    errors.name = 'Product name is required';
+  }
+  
+  if (fieldPath === 'sku' && !value?.trim()) {
+    errors.sku = 'SKU is required';
+  }
+  
+  if (fieldPath === 'category' && !value) {
+    errors.category = 'Category is required';
+  }
+  
+  if (fieldPath === 'subcategory') {
+    const categoriesRequiringSubcategory = ['flower', 'edible', 'concentrate', 'pre-roll'];
+    if (categoriesRequiringSubcategory.includes(formData.category) && !value) {
+      errors.subcategory = 'Subcategory is required for this product type';
+    }
+  }
+  
+  if (fieldPath === 'compliance.batchNumber' && !value?.trim()) {
+    errors['compliance.batchNumber'] = 'Batch number is required';
+  }
+  
+  setValidationErrors(errors);
+};
+
+// Helper function to convert field paths to display names
+const getFieldDisplayName = (fieldPath) => {
+  const displayNames = {
+    'name': 'Product Name',
+    'sku': 'SKU',
+    'category': 'Category',
+    'subcategory': 'Subcategory',
+    'compliance.batchNumber': 'Batch Number',
+    'pricing': 'Pricing Options',
+    'inventory.currentStock': 'Current Stock'
+  };
+  return displayNames[fieldPath] || fieldPath;
+}
 
   // Form state
   const [formData, setFormData] = useState({
@@ -97,7 +188,7 @@ const CreateProduct = () => {
     { id: 'review', name: 'Review', icon: '👁️' }
   ];
 
-  // Handle form field updates
+// Handle form field updates with validation
 const updateField = (path, value) => {
   setFormData(prev => {
     const newData = { ...prev };
@@ -124,6 +215,9 @@ const updateField = (path, value) => {
     
     return newData;
   });
+  
+  // Validate field in real-time
+  validateField(path, value);
 };
 
 // Auto-generate SKU
@@ -190,9 +284,20 @@ const generateSKU = () => {
 
   // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  
+  // Validate the entire form
+  const errors = validateForm();
+  setValidationErrors(errors);
+  
+  if (Object.keys(errors).length > 0) {
+    setError('Please fix the validation errors before submitting.');
+    setCurrentSection('review'); // Go to review section to show errors
+    return;
+  }
+  
+  setLoading(true);
+  setError('');
 
     try {
       // Basic validation
@@ -286,24 +391,25 @@ const generateSKU = () => {
 
             {/* Section Content */}
             {currentSection === 'basic' && (
-              <BasicInfoSection 
+            <BasicInfoSection 
                 formData={formData}
                 updateField={updateField}
                 categories={categories}
                 subcategories={subcategories}
                 generateSKU={generateSKU}
-              />
+                validationErrors={validationErrors}
+            />
             )}
 
             {currentSection === 'cannabinoids' && (
-              <CannabinoidsSection 
+            <CannabinoidsSection 
                 formData={formData}
                 updateField={updateField}
-              />
+            />
             )}
 
             {currentSection === 'pricing' && (
-              <PricingSection 
+            <PricingSection 
                 formData={formData}
                 updateField={updateField}
                 units={units}
@@ -311,28 +417,31 @@ const generateSKU = () => {
                 addPricingOption={addPricingOption}
                 removePricingOption={removePricingOption}
                 updatePricingOption={updatePricingOption}
-              />
+            />
             )}
 
             {currentSection === 'details' && (
-              <DetailsSection 
+            <DetailsSection 
                 formData={formData}
                 updateField={updateField}
                 availableEffects={availableEffects}
-              />
+            />
             )}
 
             {currentSection === 'compliance' && (
-              <ComplianceSection 
+            <ComplianceSection 
                 formData={formData}
                 updateField={updateField}
-              />
+                validationErrors={validationErrors}
+            />
             )}
 
             {currentSection === 'review' && (
-              <ReviewSection 
+            <ReviewSection 
                 formData={formData}
-              />
+                validationErrors={validationErrors}
+                getFieldDisplayName={getFieldDisplayName}
+            />
             )}
           </div>
 
@@ -377,28 +486,40 @@ const generateSKU = () => {
 };
 
 // Section Components (to be defined below)
-const BasicInfoSection = ({ formData, updateField, categories, subcategories, generateSKU }) => (
+const BasicInfoSection = ({ formData, updateField, categories, subcategories, generateSKU, validationErrors }) => (
   <div className="space-y-6">
     <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Basic Information</h2>
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
         <InputField
-            label="Product Name *"
-            value={formData.name}
-            onChange={(e) => updateField('name', e.target.value)}
-            placeholder="e.g., Purple Kush"
-            required
+          label="Product Name *"
+          value={formData.name}
+          onChange={(e) => updateField('name', e.target.value)}
+          placeholder="e.g., Purple Kush"
+          required
+          className={validationErrors?.name ? 'border-red-500 focus:border-red-500' : ''}
         />
+        {validationErrors?.name && (
+          <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
+        )}
+      </div>
       
       <div>
         <div className="flex items-center space-x-2">
-        <InputField
-            label="SKU *"
-            value={formData.sku}
-            onChange={(e) => updateField('sku', e.target.value)}
-            placeholder="e.g., FL-IN-PUR-123"
-            required
-        />
+          <div className="flex-1">
+            <InputField
+              label="SKU *"
+              value={formData.sku}
+              onChange={(e) => updateField('sku', e.target.value)}
+              placeholder="e.g., FL-IN-PUR-123"
+              required
+              className={validationErrors?.sku ? 'border-red-500 focus:border-red-500' : ''}
+            />
+            {validationErrors?.sku && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.sku}</p>
+            )}
+          </div>
           <Button
             type="button"
             variant="secondary"
@@ -411,20 +532,32 @@ const BasicInfoSection = ({ formData, updateField, categories, subcategories, ge
         </div>
       </div>
       
-      <SelectField
-        label="Category *"
-        value={formData.category}
-        onChange={(e) => updateField('category', e.target.value)}
-        options={categories.map(cat => ({ value: cat, label: cat.charAt(0).toUpperCase() + cat.slice(1) }))}
-        required
-      />
+      <div>
+        <SelectField
+          label="Category *"
+          value={formData.category}
+          onChange={(e) => updateField('category', e.target.value)}
+          options={categories.map(cat => ({ value: cat, label: cat.charAt(0).toUpperCase() + cat.slice(1) }))}
+          required
+          className={validationErrors?.category ? 'border-red-500 focus:border-red-500' : ''}
+        />
+        {validationErrors?.category && (
+          <p className="mt-1 text-sm text-red-600">{validationErrors.category}</p>
+        )}
+      </div>
       
-      <SelectField
-        label="Subcategory"
-        value={formData.subcategory}
-        onChange={(e) => updateField('subcategory', e.target.value)}
-        options={subcategories.map(sub => ({ value: sub, label: sub.charAt(0).toUpperCase() + sub.slice(1) }))}
-      />
+      <div>
+        <SelectField
+          label="Subcategory *"
+          value={formData.subcategory}
+          onChange={(e) => updateField('subcategory', e.target.value)}
+          options={subcategories.map(sub => ({ value: sub, label: sub.charAt(0).toUpperCase() + sub.slice(1) }))}
+          className={validationErrors?.subcategory ? 'border-red-500 focus:border-red-500' : ''}
+        />
+        {validationErrors?.subcategory && (
+          <p className="mt-1 text-sm text-red-600">{validationErrors.subcategory}</p>
+        )}
+      </div>
     </div>
     
     <TextareaField
@@ -628,18 +761,24 @@ const DetailsSection = ({ formData, updateField, availableEffects }) => (
   </div>
 );
 
-const ComplianceSection = ({ formData, updateField }) => (
+const ComplianceSection = ({ formData, updateField, validationErrors }) => (
   <div className="space-y-6">
     <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Compliance Information</h2>
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <InputField
-        label="Batch Number *"
-        value={formData.compliance.batchNumber}
-        onChange={(e) => updateField('compliance.batchNumber', e.target.value)}
-        placeholder="e.g., PK-2024-004"
-        required
-      />
+      <div>
+        <InputField
+          label="Batch Number *"
+          value={formData.compliance.batchNumber}
+          onChange={(e) => updateField('compliance.batchNumber', e.target.value)}
+          placeholder="e.g., PK-2024-004"
+          required
+          className={validationErrors['compliance.batchNumber'] ? 'border-red-500 focus:border-red-500' : ''}
+        />
+        {validationErrors['compliance.batchNumber'] && (
+          <p className="mt-1 text-sm text-red-600">{validationErrors['compliance.batchNumber']}</p>
+        )}
+      </div>
       
       <InputField
         label="Licensed Producer"
@@ -691,39 +830,88 @@ const ComplianceSection = ({ formData, updateField }) => (
   </div>
 );
 
-const ReviewSection = ({ formData }) => (
-  <div className="space-y-6">
-    <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Review & Submit</h2>
-    
-    <div className="bg-gray-50 rounded-lg p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-        <div>
-          <strong>Name:</strong> {formData.name}
+const ReviewSection = ({ formData, validationErrors, getFieldDisplayName }) => {
+  const errors = validationErrors ? Object.keys(validationErrors) : [];
+  const hasErrors = errors.length > 0;
+  
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Review & Submit</h2>
+      
+      {/* Validation Errors Summary */}
+      {hasErrors && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center mb-2">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Please fix the following issues before creating the product:
+              </h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+              {errors.map(fieldPath => (
+                <li key={fieldPath} className="text-red-600">
+                  <span className="font-medium">{getFieldDisplayName ? getFieldDisplayName(fieldPath) : fieldPath}:</span> {validationErrors[fieldPath]}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <div>
-          <strong>SKU:</strong> {formData.sku}
-        </div>
-        <div>
-          <strong>Category:</strong> {formData.category}
-        </div>
-        <div>
-          <strong>Subcategory:</strong> {formData.subcategory || 'None'}
-        </div>
-        <div>
-          <strong>Batch Number:</strong> {formData.compliance.batchNumber}
-        </div>
-        <div>
-          <strong>Pricing Options:</strong> {formData.pricing.length}
+      )}
+      
+      {/* Product Summary */}
+      <div className="bg-gray-50 rounded-lg p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className={validationErrors?.name ? 'text-red-600' : ''}>
+            <strong>Name:</strong> {formData.name || <em className="text-red-500">Required</em>}
+          </div>
+          <div className={validationErrors?.sku ? 'text-red-600' : ''}>
+            <strong>SKU:</strong> {formData.sku || <em className="text-red-500">Required</em>}
+          </div>
+          <div className={validationErrors?.category ? 'text-red-600' : ''}>
+            <strong>Category:</strong> {formData.category || <em className="text-red-500">Required</em>}
+          </div>
+          <div className={validationErrors?.subcategory ? 'text-red-600' : ''}>
+            <strong>Subcategory:</strong> {formData.subcategory || <em className="text-red-500">Required</em>}
+          </div>
+          <div className={validationErrors?.['compliance.batchNumber'] ? 'text-red-600' : ''}>
+            <strong>Batch Number:</strong> {formData.compliance.batchNumber || <em className="text-red-500">Required</em>}
+          </div>
+          <div className={validationErrors?.pricing ? 'text-red-600' : ''}>
+            <strong>Pricing Options:</strong> {formData.pricing?.filter(p => p.weight && p.price).length || <em className="text-red-500">At least 1 required</em>}
+          </div>
         </div>
       </div>
+      
+      {!hasErrors && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-green-800 text-sm">
+            ✅ All required fields are complete. Your product is ready to be created!
+          </p>
+        </div>
+      )}
     </div>
-    
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <p className="text-blue-800 text-sm">
-        Review all information carefully. Once created, some fields may require administrative approval to modify.
-      </p>
-    </div>
-  </div>
-);
+  );
+};
+
+// Helper function to convert field paths to display names
+const getFieldDisplayName = (fieldPath) => {
+  const displayNames = {
+    'name': 'Product Name',
+    'sku': 'SKU',
+    'category': 'Category',
+    'subcategory': 'Subcategory',
+    'compliance.batchNumber': 'Batch Number',
+    'pricing': 'Pricing Options',
+    'inventory.currentStock': 'Current Stock'
+  };
+  return displayNames[fieldPath] || fieldPath;
+};
 
 export default CreateProduct;
