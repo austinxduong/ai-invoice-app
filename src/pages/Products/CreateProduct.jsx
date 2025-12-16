@@ -26,18 +26,18 @@ const CreateProduct = () => {
     
     // Cannabinoids
     cannabinoids: {
-      thcPercentage: 0,
-      cbdPercentage: 0,
-      thcMg: 0,
-      cbdMg: 0
+      thcPercentage:'',
+      cbdPercentage:'',
+      thcMg: '',
+      cbdMg: ''
     },
     
     // Pricing (array of pricing options)
-    pricing: [{ unit: 'gram', weight: 1, price: 0 }],
+    pricing: [{ unit: 'gram', weight: '', price: '' }],
     
     // Inventory
     inventory: {
-      currentStock: 0,
+      currentStock:'',
       unit: 'each',
       lowStockAlert: 5
     },
@@ -98,21 +98,33 @@ const CreateProduct = () => {
   ];
 
   // Handle form field updates
-  const updateField = (path, value) => {
-    setFormData(prev => {
-      const newData = { ...prev };
-      const keys = path.split('.');
-      let current = newData;
-      
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (!current[keys[i]]) current[keys[i]] = {};
-        current = current[keys[i]];
-      }
-      
-      current[keys[keys.length - 1]] = value;
-      return newData;
-    });
-  };
+const updateField = (path, value) => {
+  setFormData(prev => {
+    const newData = { ...prev };
+    const keys = path.split('.');
+    let current = newData;
+    
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) current[keys[i]] = {};
+      current = current[keys[i]];
+    }
+    
+    // Convert to number if it's a numeric field and not empty
+    const fieldName = keys[keys.length - 1];
+    const numericFields = [
+      'thcPercentage', 'cbdPercentage', 'thcMg', 'cbdMg', 
+      'currentStock', 'lowStockAlert', 'weight', 'price'
+    ];
+    
+    if (numericFields.includes(fieldName) && value !== '') {
+      current[fieldName] = Number(value);
+    } else {
+      current[fieldName] = value;
+    }
+    
+    return newData;
+  });
+};
 
 // Auto-generate SKU
 const generateSKU = () => {
@@ -163,15 +175,18 @@ const generateSKU = () => {
     }));
   };
 
-  // Update pricing option
-  const updatePricingOption = (index, field, value) => {
+    // Update pricing option
+    const updatePricingOption = (index, field, value) => {
     setFormData(prev => ({
-      ...prev,
-      pricing: prev.pricing.map((option, i) => 
-        i === index ? { ...option, [field]: value } : option
-      )
+        ...prev,
+        pricing: prev.pricing.map((option, i) => 
+        i === index ? { 
+            ...option, 
+            [field]: field === 'unit' ? value : (value === '' ? '' : Number(value))
+        } : option
+        )
     }));
-  };
+    };
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -435,8 +450,8 @@ const CannabinoidsSection = ({ formData, updateField }) => (
                 label="THC Percentage"
                 type="number"
                 value={formData.cannabinoids.thcPercentage}
-                onChange={(e) => updateField('cannabinoids.thcPercentage', Number(e.target.value))}
-                placeholder="0.0"
+                onChange={(e) => updateField('cannabinoids.thcPercentage', e.target.value)}
+                placeholder="Enter THC %"
                 min={0}
                 max={100}
                 step="0.1"
@@ -445,8 +460,8 @@ const CannabinoidsSection = ({ formData, updateField }) => (
                 label="CBD Percentage"
                 type="number"
                 value={formData.cannabinoids.cbdPercentage}
-                onChange={(e) => updateField('cannabinoids.cbdPercentage', Number(e.target.value))}
-                placeholder="0.0"
+                onChange={(e) => updateField('cannabinoids.cbdPercentage', e.target.value)}
+                placeholder="Enter CBD %"
                 min={0}
                 max={100}
                 step="0.1"
@@ -461,16 +476,16 @@ const CannabinoidsSection = ({ formData, updateField }) => (
                 label="THC mg"
                 type="number"
                 value={formData.cannabinoids.thcMg}
-                onChange={(e) => updateField('cannabinoids.thcMg', Number(e.target.value))}
-                placeholder="0"
+                onChange={(e) => updateField('cannabinoids.thcMg', e.target.value)}
+                placeholder="Enter THC mg"
                 min={0}
             />
             <InputField
-                label="CBD mg"
+                label="CBD mg" 
                 type="number"
                 value={formData.cannabinoids.cbdMg}
-                onChange={(e) => updateField('cannabinoids.cbdMg', Number(e.target.value))}
-                placeholder="0"
+                onChange={(e) => updateField('cannabinoids.cbdMg', e.target.value)}
+                placeholder="Enter CBD mg"
                 min={0}
             />
         </div>
@@ -508,21 +523,23 @@ const PricingSection = ({ formData, updateField, units, inventoryUnits, addPrici
             />
             
             <InputField
-              label="Weight (grams)"
-              type="number"
-              value={option.weight}
-              onChange={(e) => updatePricingOption(index, 'weight', Number(e.target.value))}
-              min={0}
-              step="0.01"
+            label="Weight (grams)"
+            type="number"
+            value={option.weight}
+            onChange={(e) => updatePricingOption(index, 'weight', e.target.value)}
+            placeholder="Enter weight"
+            min={0}
+            step="0.01"
             />
             
             <InputField
-              label="Price ($)"
-              type="number"
-              value={option.price}
-              onChange={(e) => updatePricingOption(index, 'price', Number(e.target.value))}
-              min={0}
-              step="0.01"
+            label="Price ($)"
+            type="number"
+            value={option.price}
+            onChange={(e) => updatePricingOption(index, 'price', e.target.value)}
+            placeholder="Enter price"
+            min={0}
+            step="0.01"
             />
             
             {formData.pricing.length > 1 && (
