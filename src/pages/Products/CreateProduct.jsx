@@ -114,26 +114,38 @@ const CreateProduct = () => {
     });
   };
 
-  // Auto-generate SKU
-  const generateSKU = () => {
-    if (formData.name && formData.category) {
-      const categoryCode = {
-        'flower': 'FL',
-        'edible': 'ED',
-        'concentrate': 'CN',
-        'topical': 'TP',
-        'accessory': 'AC',
-        'pre-roll': 'PR'
-      }[formData.category];
-      
-      const subcategoryCode = formData.subcategory?.substring(0, 2).toUpperCase() || 'GN';
-      const nameCode = formData.name.replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase();
-      const timestamp = Date.now().toString().slice(-3);
-      
-      const generatedSKU = `${categoryCode}-${subcategoryCode}-${nameCode}-${timestamp}`;
-      updateField('sku', generatedSKU);
-    }
-  };
+// Auto-generate SKU
+const generateSKU = () => {
+  if (!formData.name || !formData.category) {
+    alert('Please enter a product name and select a category first');
+    return;
+  }
+
+  const categoryCode = {
+    'flower': 'FL',
+    'edible': 'ED', 
+    'concentrate': 'CN',
+    'topical': 'TP',
+    'accessory': 'AC',
+    'pre-roll': 'PR'
+  }[formData.category];
+  
+  const subcategoryCode = formData.subcategory 
+    ? formData.subcategory.substring(0, 2).toUpperCase() 
+    : 'GN'; // Generic if no subcategory
+  
+  const nameCode = formData.name
+    .replace(/[^A-Za-z]/g, '') // Remove non-letters
+    .substring(0, 3)
+    .toUpperCase();
+  
+  const timestamp = Date.now().toString().slice(-3);
+  
+  const generatedSKU = `${categoryCode}-${subcategoryCode}-${nameCode}-${timestamp}`;
+  updateField('sku', generatedSKU);
+  
+  console.log('Generated SKU:', generatedSKU);
+};
 
   // Add pricing option
   const addPricingOption = () => {
