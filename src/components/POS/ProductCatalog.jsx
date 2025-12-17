@@ -13,6 +13,12 @@ const ProductCatalog = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exportLoading, setExportLoading] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false); 
+  const [importData, setImportData] = useState([]); 
+  const [importLoading, setImportLoading] = useState(false); 
+  const [importStep, setImportStep] = useState('upload'); 
+  const [validationErrors, setValidationErrors] = useState({}); 
+  const [duplicates, setDuplicates] = useState([]); 
   const [filters, setFilters] = useState({
     category: '',
     search: '',
@@ -275,6 +281,312 @@ const downloadCSV = (csvContent, filename) => {
 };
 
 
+// Import products from CSV
+const handleImportClick = () => {
+  setShowImportModal(true);
+  setImportStep('upload');
+  setImportData([]);
+  setValidationErrors({});
+  setDuplicates([]);
+};
+
+const closeImportModal = () => {
+  setShowImportModal(false);
+  setImportStep('upload');
+  setImportData([]);
+  setValidationErrors({});
+  setDuplicates([]);
+};
+
+// Handle CSV file upload
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validate file type
+  if (!file.name.endsWith('.csv')) {
+    alert('Please upload a CSV file');
+    return;
+  }
+
+  // Read the CSV file
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const parsedData = parseCSV(csv);
+      
+      if (parsedData.length === 0) {
+        alert('The CSV file appears to be empty');
+        return;
+      }
+      
+      setImportData(parsedData);
+      setImportStep('validate');
+      validateImportData(parsedData);
+    } catch (error) {
+      console.error('Error parsing CSV:', error);
+      alert('Error reading CSV file. Please check the file format.');
+    }
+  };
+  
+  reader.readAsText(file);
+};
+
+// Parse CSV content
+const parseCSV = (csvText) => {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return []; // Need at least header + 1 data row
+  
+  const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+  const data = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+    if (values.length < headers.length) continue; // Skip incomplete rows
+    
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    
+    // Convert to product format
+    const product = convertRowToProduct(row, i);
+    if (product) data.push(product);
+  }
+  
+  return data;
+};
+
+// Convert CSV row to product object
+const convertRowToProduct = (row, rowIndex) => {
+  try {
+    return {
+      rowIndex,
+      name: row['Name'] || '',
+      sku: row['SKU'] || '',
+      category: row['Category']?.toLowerCase() || '',
+      subcategory: row['Subcategory']?.toLowerCase() || '',
+      description: row['Description'] || '',
+      cannabinoids: {
+        thcPercentage: parseFloat(row['THC %']) || 0,
+        cbdPercentage: parseFloat(row['CBD %']) || 0,
+        thcMg: parseFloat(row['THC mg']) || 0,
+        cbdMg: parseFloat(row['CBD mg']) || 0,
+      },
+      inventory: {
+        currentStock: parseInt(row['Current Stock']) || 0,
+        unit: row['Stock Unit']?.toLowerCase() || 'each',
+        lowStockAlert: parseInt(row['Low Stock Alert']) || 5,
+      },
+      pricing: parsePricingOptions(row['Pricing Options']),
+      effects: row['Effects'] ? row['Effects'].split(',').map(e => e.trim().toLowerCase()) : [],
+      flavors: row['Flavors'] ? row['Flavors'].split(',').map(f => f.trim()) : [],
+      compliance: {
+        batchNumber: row['Batch Number'] || '',
+        labTested: row['Lab Tested']?.toLowerCase() === 'yes',
+        licensedProducer: row['Licensed Producer'] || '',
+        harvestDate: row['Harvest Date'] || '',
+        packagedDate: row['Packaged Date'] || '',
+        expirationDate: row['Expiration Date'] || '',
+        stateTrackingId: row['State Tracking ID'] || '',
+      },
+      supplier: {
+        name: row['Supplier Name'] || '',
+        contact: row['Supplier Contact'] || '',
+        license: row['Supplier License'] || '',
+      },
+      isActive: row['Active']?.toLowerCase() !== 'no',
+      isAvailable: row['Available']?.toLowerCase() !== 'no',
+    };
+  } catch (error) {
+    console.error('Error converting row to product:', error);
+    return null;
+  }
+};
+
+// Parse pricing options from CSV format
+const parsePricingOptions = (pricingText) => {
+  if (!pricingText) return [{ unit: 'gram', weight: 1, price: 0 }];
+  
+  try {
+    const options = pricingText.split(';').map(option => {
+      const match = option.match(/(\d+\.?\d*)g\s*\((\w+)\)\s*-\s*\$(\d+\.?\d*)/);
+      if (match) {
+        return {
+          weight: parseFloat(match[1]),
+          unit: match[2].toLowerCase(),
+          price: parseFloat(match[3]),
+        };
+      }
+      return null;
+    }).filter(Boolean);
+    
+    return options.length > 0 ? options : [{ unit: 'gram', weight: 1, price: 0 }];
+  } catch (error) {
+    return [{ unit: 'gram', weight: 1, price: 0 }];
+  }
+};
+
+// Validate import data
+const validateImportData = async (data) => {
+  setImportLoading(true);
+  const errors = {};
+  const duplicateList = [];
+  
+  try {
+    // Get existing products to check for duplicates
+    const existingResponse = await productApi.getProducts({ limit: 10000 });
+    const existingProducts = existingResponse.products || [];
+    const existingSkus = new Set(existingProducts.map(p => p.sku.toLowerCase()));
+    const existingNames = new Set(existingProducts.map(p => p.name.toLowerCase()));
+    
+    data.forEach((product, index) => {
+      const rowErrors = [];
+      
+      // Required field validation
+      if (!product.name?.trim()) {
+        rowErrors.push('Name is required');
+      }
+      
+      if (!product.sku?.trim()) {
+        rowErrors.push('SKU is required');
+      }
+      
+      if (!product.category?.trim()) {
+        rowErrors.push('Category is required');
+      } else {
+        // Validate category enum
+        const validCategories = ['flower', 'edible', 'concentrate', 'topical', 'accessory', 'pre-roll'];
+        if (!validCategories.includes(product.category)) {
+          rowErrors.push(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
+        }
+      }
+      
+      if (!product.compliance?.batchNumber?.trim()) {
+        rowErrors.push('Batch Number is required');
+      }
+      
+      // Pricing validation
+      if (!product.pricing || product.pricing.length === 0 || 
+          !product.pricing.some(p => p.weight > 0 && p.price > 0)) {
+        rowErrors.push('At least one valid pricing option is required');
+      }
+      
+      // Check for duplicates
+      const isDuplicateSku = existingSkus.has(product.sku?.toLowerCase());
+      const isDuplicateName = existingNames.has(product.name?.toLowerCase());
+      
+      if (isDuplicateSku || isDuplicateName) {
+        const existingProduct = existingProducts.find(p => 
+          p.sku.toLowerCase() === product.sku?.toLowerCase() || 
+          p.name.toLowerCase() === product.name?.toLowerCase()
+        );
+        
+        duplicateList.push({
+          rowIndex: index,
+          importProduct: product,
+          existingProduct,
+          action: 'skip', // Default action
+          matchType: isDuplicateSku ? 'SKU' : 'Name'
+        });
+      }
+      
+      if (rowErrors.length > 0) {
+        errors[index] = rowErrors;
+      }
+    });
+    
+    setValidationErrors(errors);
+    setDuplicates(duplicateList);
+    
+  } catch (error) {
+    console.error('Error validating import data:', error);
+    setError('Error validating import data');
+  } finally {
+    setImportLoading(false);
+  }
+};
+
+// Handle duplicate action change
+const handleDuplicateAction = (rowIndex, action) => {
+  setDuplicates(prev => 
+    prev.map(dup => 
+      dup.rowIndex === rowIndex ? { ...dup, action } : dup
+    )
+  );
+};
+
+// Process final import
+const handleFinalImport = async () => {
+  setImportLoading(true);
+  
+  try {
+    let successCount = 0;
+    let errorCount = 0;
+    const importErrors = [];
+    
+    for (let i = 0; i < importData.length; i++) {
+      // Skip rows with validation errors
+      if (validationErrors[i]) {
+        errorCount++;
+        continue;
+      }
+      
+      const product = importData[i];
+      const duplicate = duplicates.find(d => d.rowIndex === i);
+      
+      // Skip if duplicate and action is skip
+      if (duplicate && duplicate.action === 'skip') {
+        continue;
+      }
+      
+      try {
+        const productData = {
+          ...product,
+          createdBy: 'import-user' // You might want to use actual user ID
+        };
+        
+        // Remove rowIndex before sending to API
+        delete productData.rowIndex;
+        
+        if (duplicate && duplicate.action === 'replace') {
+          // Update existing product
+          await productApi.updateProduct(duplicate.existingProduct._id, productData);
+        } else {
+          // Create new product
+          await productApi.createProduct(productData);
+        }
+        
+        successCount++;
+      } catch (error) {
+        console.error('Error importing product:', error);
+        importErrors.push({ row: i + 2, name: product.name, error: error.message });
+        errorCount++;
+      }
+    }
+    
+    // Show results
+    let message = `Import completed!\n${successCount} products imported successfully.`;
+    if (errorCount > 0) {
+      message += `\n${errorCount} products had errors.`;
+    }
+    
+    alert(message);
+    
+    // Reload products and close modal
+    closeImportModal();
+    loadProducts();
+    
+  } catch (error) {
+    console.error('Error during final import:', error);
+    setError('Error during import process');
+  } finally {
+    setImportLoading(false);
+  }
+};
+
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -284,10 +596,410 @@ const downloadCSV = (csvContent, filename) => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Cannabis Product Catalog</h1>
           <p className="text-gray-600">Browse our selection of lab-tested cannabis products</p>
         </div>
+
+        {/* Import Products Modal */}
+{showImportModal && (
+  <div className="fixed inset-0 z-50 overflow-hidden">
+    {/* Backdrop */}
+    <div 
+      className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
+      onClick={closeImportModal}
+    />
+    
+    {/* Modal */}
+    <div className="absolute inset-0 flex items-center justify-center p-4">
+      <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <h2 className="text-2xl font-bold text-gray-900">Import Products</h2>
+          <button
+            onClick={closeImportModal}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          
+          {/* Step 1: File Upload */}
+          {importStep === 'upload' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload CSV File</h3>
+                <p className="text-gray-600 mb-4">
+                  Upload a CSV file with your product data. Make sure to include all required fields.
+                </p>
+              </div>
+
+              {/* File Upload Area */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label htmlFor="csv-upload" className="cursor-pointer">
+                  <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <div className="text-lg font-medium text-gray-900 mb-2">Click to upload CSV file</div>
+                  <div className="text-sm text-gray-600">or drag and drop your file here</div>
+                </label>
+              </div>
+
+              {/* CSV Template Download */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <Info className="h-5 w-5 text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-800 mb-1">Need a template?</h4>
+                    <p className="text-sm text-blue-700 mb-2">
+                      Download our CSV template to ensure your data is formatted correctly.
+                    </p>
+                    <button
+                      onClick={() => {
+                        // Create and download a template CSV
+                        const templateHeaders = [
+                          'Name', 'SKU', 'Category', 'Subcategory', 'Description', 
+                          'THC %', 'CBD %', 'THC mg', 'CBD mg',
+                          'Current Stock', 'Stock Unit', 'Low Stock Alert',
+                          'Pricing Options', 'Effects', 'Flavors',
+                          'Batch Number', 'Lab Tested', 'Licensed Producer',
+                          'Harvest Date', 'Packaged Date', 'Expiration Date',
+                          'State Tracking ID', 'Supplier Name', 'Supplier Contact',
+                          'Supplier License', 'Active', 'Available'
+                        ];
+                        const exampleRow = [
+                          'Purple Kush', 'FL-IN-PUR-001', 'flower', 'indica', 'Premium indoor grown Purple Kush strain',
+                          '22.5', '0.3', '', '',
+                          '100', 'gram', '10',
+                          '3.5g (eighth) - $35; 7g (quarter) - $65', 'relaxed, euphoric, sleepy', 'earthy, sweet',
+                          'PK-2024-001', 'Yes', 'Premium Cannabis Co',
+                          '2024-01-15', '2024-02-01', '2025-02-01',
+                          'CA123456789', 'Premium Suppliers Inc', 'contact@premiumsuppliers.com',
+                          'LICENSE-12345', 'Yes', 'Yes'
+                        ];
+                        const csvContent = [templateHeaders, exampleRow]
+                          .map(row => row.map(field => `"${field}"`).join(','))
+                          .join('\n');
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'product-import-template.csv';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                    >
+                      Download Template
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Validation & Review */}
+          {importStep === 'validate' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Review Import Data</h3>
+                  <p className="text-gray-600">
+                    {importData.length} products found. Review and fix any issues before importing.
+                  </p>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setImportStep('upload')}
+                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => setImportStep('confirm')}
+                    disabled={Object.keys(validationErrors).length > 0}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Continue to Import
+                  </button>
+                </div>
+              </div>
+
+              {/* Validation Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="text-green-800 font-medium">Valid Products</div>
+                  <div className="text-2xl font-bold text-green-900">
+                    {importData.length - Object.keys(validationErrors).length}
+                  </div>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="text-red-800 font-medium">Validation Errors</div>
+                  <div className="text-2xl font-bold text-red-900">
+                    {Object.keys(validationErrors).length}
+                  </div>
+                </div>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="text-yellow-800 font-medium">Duplicates Found</div>
+                  <div className="text-2xl font-bold text-yellow-900">
+                    {duplicates.length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Validation Errors */}
+              {Object.keys(validationErrors).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <h4 className="font-medium text-red-800 mb-3">Products with Validation Errors</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {Object.entries(validationErrors).map(([rowIndex, errors]) => {
+                      const product = importData[parseInt(rowIndex)];
+                      return (
+                        <div key={rowIndex} className="flex items-center justify-between bg-white p-3 rounded border">
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              Row {parseInt(rowIndex) + 2}: {product?.name || 'Unknown Product'}
+                            </div>
+                            <div className="text-sm text-red-600">
+                              {errors.join(', ')}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Duplicate Handling */}
+              {duplicates.length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="font-medium text-yellow-800 mb-3">Duplicate Products Found</h4>
+                  <div className="space-y-4 max-h-60 overflow-y-auto">
+                    {duplicates.map((duplicate, index) => (
+                      <div key={index} className="bg-white p-4 rounded border">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              Row {duplicate.rowIndex + 2}: {duplicate.importProduct.name}
+                            </div>
+                            <div className="text-sm text-yellow-700">
+                              Matches existing product by {duplicate.matchType}: "{duplicate.existingProduct.name}"
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name={`duplicate-${index}`}
+                              value="skip"
+                              checked={duplicate.action === 'skip'}
+                              onChange={() => handleDuplicateAction(duplicate.rowIndex, 'skip')}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">Skip (don't import this product)</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name={`duplicate-${index}`}
+                              value="replace"
+                              checked={duplicate.action === 'replace'}
+                              onChange={() => handleDuplicateAction(duplicate.rowIndex, 'replace')}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">Replace (overwrite existing product with new data)</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name={`duplicate-${index}`}
+                              value="add"
+                              checked={duplicate.action === 'add'}
+                              onChange={() => handleDuplicateAction(duplicate.rowIndex, 'add')}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">Add as duplicate (create new product with different SKU)</span>
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Valid Products Preview */}
+              {importData.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">Products Ready to Import</h4>
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto max-h-60">
+                      <table className="min-w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Row</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {importData.map((product, index) => {
+                            const hasError = validationErrors[index];
+                            const isDuplicate = duplicates.find(d => d.rowIndex === index);
+                            
+                            return (
+                              <tr key={index} className={hasError ? 'bg-red-50' : 'hover:bg-gray-50'}>
+                                <td className="px-3 py-2 text-sm text-gray-900">{index + 2}</td>
+                                <td className="px-3 py-2 text-sm text-gray-900">{product.name}</td>
+                                <td className="px-3 py-2 text-sm text-gray-900">{product.sku}</td>
+                                <td className="px-3 py-2 text-sm text-gray-900">{product.category}</td>
+                                <td className="px-3 py-2 text-sm">
+                                  {hasError && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                      Errors
+                                    </span>
+                                  )}
+                                  {isDuplicate && !hasError && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                      Duplicate ({isDuplicate.action})
+                                    </span>
+                                  )}
+                                  {!hasError && !isDuplicate && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      Ready
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Final Confirmation */}
+          {importStep === 'confirm' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Import</h3>
+                <p className="text-gray-600">
+                  Review the final import summary before proceeding.
+                </p>
+              </div>
+
+              {/* Final Summary */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h4 className="font-medium text-blue-900 mb-4">Import Summary</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-700">Total products to import:</span>
+                    <span className="font-bold ml-2">
+                      {importData.length - Object.keys(validationErrors).length - duplicates.filter(d => d.action === 'skip').length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">New products:</span>
+                    <span className="font-bold ml-2">
+                      {importData.length - Object.keys(validationErrors).length - duplicates.length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Products to replace:</span>
+                    <span className="font-bold ml-2">
+                      {duplicates.filter(d => d.action === 'replace').length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Products to add as duplicates:</span>
+                    <span className="font-bold ml-2">
+                      {duplicates.filter(d => d.action === 'add').length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setImportStep('validate')}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Back to Review
+                </button>
+                <button
+                  onClick={handleFinalImport}
+                  disabled={importLoading}
+                  className="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2"
+                >
+                  {importLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Importing...</span>
+                    </>
+                  ) : (
+                    <span>Import Products</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+        
         
         {/* Action Buttons */}
         <div className="flex space-x-3">
-{/* Export Products Button */}
+
+        {/* Import Products Button */}
+          <button
+            onClick={handleImportClick}
+            disabled={importLoading}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+          >
+            {importLoading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                <span>Import Products</span>
+              </>
+            )}
+          </button>
+
+        {/* Export Products Button */}
           <button
             onClick={exportProducts}
             disabled={exportLoading} // Use exportLoading instead of loading
@@ -477,6 +1189,7 @@ const downloadCSV = (csvContent, filename) => {
           {/* Modal */}
           <div className="absolute inset-0 flex items-center justify-center p-4">
             <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+
               
               {/* Header */}
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
@@ -655,10 +1368,12 @@ const downloadCSV = (csvContent, filename) => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
 
 
 export default ProductCatalog;
+
 
