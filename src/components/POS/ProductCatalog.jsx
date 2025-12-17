@@ -12,6 +12,7 @@ const ProductCatalog = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exportLoading, setExportLoading] = useState(false)
   const [filters, setFilters] = useState({
     category: '',
     search: '',
@@ -115,24 +116,211 @@ const handleAddToCart = (product, selectedPricing = null) => {
     setSelectedProduct(null);
   }
 
+// Export products to CSV
+const exportProducts = async () => {
+  try {
+    setExportLoading(true); // Use export loading instead of main loading
+    setError(null);
+    
+    // Fetch ALL products without pagination
+    const response = await productApi.getProducts({
+      page: 1,
+      limit: 10000, // High limit to get all products
+      category: '', // No filters
+      search: '',
+      inStock: false
+    });
+    
+    const products = response.products || [];
+    
+    if (products.length === 0) {
+      alert('No products to export');
+      return;
+    }
+    
+    // Convert products to CSV format
+    const csvData = convertProductsToCSV(products);
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const filename = `products-export-${timestamp}.csv`;
+    
+    // Download the CSV file
+    downloadCSV(csvData, filename);
+    
+  } catch (err) {
+    console.error('Export failed:', err);
+    setError('Failed to export products. Please try again.');
+  } finally {
+    setExportLoading(false); // Use export loading instead of main loading
+  }
+};
+
+// Convert products array to CSV string
+const convertProductsToCSV = (products) => {
+  // Define CSV headers
+  const headers = [
+    'Name',
+    'SKU', 
+    'Category',
+    'Subcategory',
+    'Description',
+    'THC %',
+    'CBD %',
+    'THC mg',
+    'CBD mg',
+    'Current Stock',
+    'Stock Unit',
+    'Low Stock Alert',
+    'Pricing Options',
+    'Effects',
+    'Flavors',
+    'Batch Number',
+    'Lab Tested',
+    'Licensed Producer',
+    'Harvest Date',
+    'Packaged Date',
+    'Expiration Date',
+    'State Tracking ID',
+    'Supplier Name',
+    'Supplier Contact',
+    'Supplier License',
+    'Active',
+    'Available',
+    'Created Date',
+    'Images Count'
+  ];
+  
+  // Convert products to CSV rows
+  const rows = products.map(product => {
+    // Format pricing options
+    const pricingText = product.pricing?.map(p => 
+      `${p.weight}g (${p.unit}) - $${p.price}`
+    ).join('; ') || '';
+    
+    // Format effects and flavors
+    const effectsText = product.effects?.join(', ') || '';
+    const flavorsText = product.flavors?.join(', ') || '';
+    
+    // Format dates
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      try {
+        return new Date(dateStr).toLocaleDateString();
+      } catch {
+        return dateStr;
+      }
+    };
+    
+    return [
+      product.name || '',
+      product.sku || '',
+      product.category || '',
+      product.subcategory || '',
+      (product.description || '').replace(/,/g, ';'), // Replace commas to avoid CSV issues
+      product.cannabinoids?.thcPercentage || '',
+      product.cannabinoids?.cbdPercentage || '',
+      product.cannabinoids?.thcMg || '',
+      product.cannabinoids?.cbdMg || '',
+      product.inventory?.currentStock || '',
+      product.inventory?.unit || '',
+      product.inventory?.lowStockAlert || '',
+      pricingText.replace(/,/g, ';'), // Replace commas in pricing
+      effectsText,
+      flavorsText,
+      product.compliance?.batchNumber || '',
+      product.compliance?.labTested ? 'Yes' : 'No',
+      product.compliance?.licensedProducer || '',
+      formatDate(product.compliance?.harvestDate),
+      formatDate(product.compliance?.packagedDate),
+      formatDate(product.compliance?.expirationDate),
+      product.compliance?.stateTrackingId || '',
+      product.supplier?.name || '',
+      product.supplier?.contact || '',
+      product.supplier?.license || '',
+      product.isActive ? 'Yes' : 'No',
+      product.isAvailable ? 'Yes' : 'No',
+      formatDate(product.createdAt),
+      product.images?.length || 0
+    ];
+  });
+  
+  // Combine headers and rows
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(field => `"${field}"`).join(','))
+    .join('\n');
+    
+  return csvContent;
+};
+
+// Download CSV file
+const downloadCSV = (csvContent, filename) => {
+  // Create blob with CSV content
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  // Create download link
+  const link = document.createElement('a');
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Show success alert (you can customize this)
+    alert('Products exported successfully! Check your downloads folder.');
+  }
+};
+
 
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Cannabis Product Catalog</h1>
-        <p className="text-gray-600">Browse our selection of lab-tested cannabis products</p>
-      </div>
-
-        <button
-          onClick={() => navigate('/products/new')}
-          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 mb-5 rounded-lg font-medium transition-colors flex items-center space-x-2"
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cannabis Product Catalog</h1>
+          <p className="text-gray-600">Browse our selection of lab-tested cannabis products</p>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex space-x-3">
+{/* Export Products Button */}
+          <button
+            onClick={exportProducts}
+            disabled={exportLoading} // Use exportLoading instead of loading
+            className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
           >
-          <span>+</span>
-          <span>Add New Product</span>
-        </button>
+            {exportLoading ? ( // Use exportLoading instead of loading
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Export Products</span>
+              </>
+            )}
+          </button>
+          
+          {/* Add New Product Button */}
+          <button
+            onClick={() => navigate('/products/new')}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+          >
+            <span>+</span>
+            <span>Add New Product</span>
+          </button>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
