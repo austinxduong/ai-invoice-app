@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';  // ADD THIS
+import { useAuth } from '../../context/AuthContext';  
 import { API_PATHS } from '../../utils/apiPaths';
+import axiosInstance from '../../utils/axiosInstance';
 
 const DemoBooking = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const DemoBooking = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
+
     // Company Information
     companyName: '',
     website: '',
@@ -61,40 +63,94 @@ const DemoBooking = () => {
     }));
   };
 
+
+
+  const testAPI = async () => {
+  console.log('🧪 Testing API endpoint...');
+  console.log('🧪 API_PATHS.DEMO.BOOK:', API_PATHS.DEMO.BOOK);
+  console.log('🧪 BASE_URL from axios:', axiosInstance.defaults.baseURL);
+  
+  try {
+    const testData = {
+      companyName: "Test Cannabis Company",
+      industry: "dispensary", 
+      firstName: "John",
+      lastName: "Doe",
+      email: "john@testcannabis.com",
+      phone: "555-1234",
+      numberOfLocations: "1",
+      licenseTypes: ["retail"],
+      states: "CA",
+      primaryPainPoints: "Need better inventory management"
+    };
+    
+    console.log('🧪 Sending test data:', testData);
+    
+    const response = await axiosInstance.post(API_PATHS.DEMO.BOOK, testData);
+    
+    console.log('🧪 API test success:', response.data);
+    alert(`API test successful! Response: ${JSON.stringify(response.data)}`);
+  } catch (error) {
+    console.error('🧪 API test failed:', error);
+    console.error('🧪 Error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url
+    });
+    alert(`API test failed: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
+  }
+};
+
+
+
+
 const handleSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
 
   try {
-    // Submit demo request using the correct API endpoint
-    const response = await fetch(`${API_PATHS.DEMO.BOOK}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...formData,
-        requestedAt: new Date().toISOString(),
-        status: 'pending'
-      })
-    });
-
-    if (!response.ok) throw new Error('Failed to submit demo request');
-
-    // Set demo booked status in AuthContext
-    setDemoBooked(true);
+    console.log('📤 Submitting demo request with data:', formData);
     
+    // Clean data - remove empty strings and arrays
+    const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
+      if (value === '') return acc;
+      if (Array.isArray(value) && value.length === 0) return acc;
+      acc[key] = value;
+      return acc;
+    }, {});
+    
+    const submissionData = {
+      ...cleanedData,
+      requestedAt: new Date().toISOString(),
+      status: 'pending'
+    };
+    
+    const response = await axiosInstance.post(API_PATHS.DEMO.BOOK, submissionData);
+    console.log('📤 Demo request success:', response.data);
+
+    // Set demo booked status directly in localStorage
+    localStorage.setItem('demoBooked', 'true');
+
+    // DEBUG LINE:
+     console.log('🎉 Setting submitted to true...');
+    
+    // Show success page
     setSubmitted(true);
+    console.log('🎉 Submitted state should now be:', true);
     
   } catch (error) {
-    console.error('Error submitting demo request:', error);
-    alert('Error submitting demo request. Please try again.');
+    console.error('📤 Demo request error:', error);
+    alert(`Error submitting demo request: ${error.response?.data?.message || error.message}`);
   } finally {
     setLoading(false);
   }
 };
 
-  if (submitted) {
-    return <DemoBookingSuccess formData={formData} />;
-  }
+if (submitted) {
+  return <DemoBookingSuccess formData={formData} />;
+}
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -364,6 +420,17 @@ const handleSubmit = async (e) => {
             </div>
 
             {/* Marketing Consent */}
+            <div className="mb-4">
+  <button
+    type="button"
+    onClick={testAPI}
+    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg mr-4"
+  >
+    🧪 Test API Connection
+  </button>
+  <small className="text-gray-500">Debug button - will be removed</small>
+</div>
+
             <div className="border-t border-gray-200 pt-6">
               <label className="flex items-start">
                 <input
@@ -395,6 +462,7 @@ const handleSubmit = async (e) => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     <span>Submitting Request...</span>
+
                   </div>
                 ) : (
                   'Request Demo'
@@ -461,7 +529,7 @@ const DemoBookingSuccess = ({ formData }) => {
           </div>
           
           <div className="space-y-3">
-            <button
+            {/* <button
               onClick={() => navigate('/login')}
               className="block w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
             >
@@ -473,11 +541,11 @@ const DemoBookingSuccess = ({ formData }) => {
               className="block w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
             >
               Create Your Account
-            </button>
+            </button> */}
             
             <button
               onClick={() => navigate('/')}
-              className="block w-full text-gray-600 hover:text-gray-800 transition-colors"
+              className="block w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
             >
               Return to Homepage
             </button>
