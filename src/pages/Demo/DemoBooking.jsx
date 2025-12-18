@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';  // ADD THIS
+import { API_PATHS } from '../../utils/apiPaths';
 
 const DemoBooking = () => {
   const navigate = useNavigate();
+  const { setDemoBooked } = useAuth(); 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
@@ -58,36 +61,36 @@ const DemoBooking = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      // Submit demo request
-      const response = await fetch('/api/demo-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          requestedAt: new Date().toISOString(),
-          status: 'pending'
-        })
-      });
+  try {
+    // Submit demo request using the correct API endpoint
+    const response = await fetch(`${API_PATHS.DEMO.BOOK}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...formData,
+        requestedAt: new Date().toISOString(),
+        status: 'pending'
+      })
+    });
 
-      if (!response.ok) throw new Error('Failed to submit demo request');
+    if (!response.ok) throw new Error('Failed to submit demo request');
 
-      setSubmitted(true);
-      
-      // Optional: Send to CRM/Calendar booking system
-      // await scheduleDemo(formData);
-      
-    } catch (error) {
-      console.error('Error submitting demo request:', error);
-      alert('Error submitting demo request. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Set demo booked status in AuthContext
+    setDemoBooked(true);
+    
+    setSubmitted(true);
+    
+  } catch (error) {
+    console.error('Error submitting demo request:', error);
+    alert('Error submitting demo request. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (submitted) {
     return <DemoBookingSuccess formData={formData} />;
@@ -404,18 +407,18 @@ const DemoBooking = () => {
         {/* Trust Signals */}
         <div className="mt-12 text-center">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
+            {/* <div>
               <div className="text-2xl font-bold text-green-600">500+</div>
               <div className="text-gray-600">Cannabis Businesses Served</div>
-            </div>
-            <div>
+            </div> */}
+            {/* <div>
               <div className="text-2xl font-bold text-green-600">99.9%</div>
               <div className="text-gray-600">Uptime Guarantee</div>
-            </div>
-            <div>
+            </div> */}
+            {/* <div>
               <div className="text-2xl font-bold text-green-600">24/7</div>
               <div className="text-gray-600">Support Available</div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -425,6 +428,8 @@ const DemoBooking = () => {
 
 // Success Page Component
 const DemoBookingSuccess = ({ formData }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
       <div className="max-w-md w-full mx-auto px-4">
@@ -451,23 +456,31 @@ const DemoBookingSuccess = ({ formData }) => {
               <li>• Demo scheduling call/email</li>
               <li>• Customized demo preparation</li>
               <li>• 45-minute live demonstration</li>
+              <li>• Account setup after demo call</li>
             </ul>
           </div>
           
           <div className="space-y-3">
-            <a
-              href="mailto:sales@yourcompany.com"
+            <button
+              onClick={() => navigate('/login')}
               className="block w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
             >
-              Contact Sales Directly
-            </a>
+              Continue to Login
+            </button>
             
-            <a
-              href="/"
+            <button
+              onClick={() => navigate('/signup')}
+              className="block w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Create Your Account
+            </button>
+            
+            <button
+              onClick={() => navigate('/')}
               className="block w-full text-gray-600 hover:text-gray-800 transition-colors"
             >
               Return to Homepage
-            </a>
+            </button>
           </div>
         </div>
       </div>

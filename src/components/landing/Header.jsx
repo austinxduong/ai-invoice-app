@@ -81,10 +81,10 @@ const Header = () => {
                                     Login
                                 </Link>
                                 <Link   
-                                    to="/signup"
-                                    className="bg-gradient-to-r from-blue-950 to-blue-900 hover:bg-gray-800 text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                                to="/demo"
+                                className="bg-gradient-to-r from-green-600 to-green-700 hover:bg-green-800 text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg"
                                 >
-                                    Sign Up
+                                Book Demo
                                 </Link>
                                 </>
                                 )}
@@ -144,10 +144,10 @@ const Header = () => {
                                         Login
                                     </Link>
                                     <Link
-                                        to="/signup"
-                                        className="block w-full text-left bg-gray-900 hover:bg-gray800 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200"
+                                    to="/demo"
+                                    className="block w-full text-left bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200"
                                     >
-                                        Sign Up
+                                    Book Demo
                                     </Link>
                                 </>
                             )}

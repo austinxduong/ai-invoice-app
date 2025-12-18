@@ -23,6 +23,7 @@ import { POSTransactionProvider } from "./context/POSTransaction";
 import ReportsDashboard from "./pages/Reports/ReportsDashboard";
 import { ReportingProvider } from "./context/ReportingContext";
 import CreateProduct from "./pages/Products/CreateProduct";
+import DemoBooking from "./pages/Demo/DemoBooking";
 
 const App = () => {
   console.log('🚨 APP COMPONENT LOADING');
@@ -92,6 +93,11 @@ const App = () => {
 
           <Route path="/products/new" element={
             <CreateProduct />
+          } />
+
+          <Route path="/demo" element={
+            <DemoBooking />
+            
           } />
 
           </Routes>

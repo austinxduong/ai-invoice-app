@@ -21,5 +21,11 @@ export const API_PATHS = {
     PARSE_INVOICE_TEXT: '/api/ai/parse-text',
     GENERATE_REMINDER: '/api/ai/generate-reminder',
     GET_DASHBOARD_SUMMARY: '/api/ai/dashboard-summary'
+  },
+
+  DEMO: {
+    BOOK: "/api/demo-requests",        // CHANGE: was "/api/demo/book"
+    STATUS: "/api/demo/status", 
+    LIST: "/api/demo/requests"
   }
 }
