@@ -9,7 +9,7 @@ const OurTeam = () => {
       id: 1,
       name: "Austin X. Duong",
       position: "Founder & CEO / Founding Engineer",
-      bio: "Austin is a passionate Software Engineer with a vision to revolutionize the cannabis retail industry through innovative technology solutions. With a background in software development and business strategy, he leads the team in building cutting-edge POS systems.",
+      bio: "Austin is a passionate Software Engineer with a vision to revolutionize the cannabis retail industry through innovative technology solutions. A background in software development with strong business acumen, he leads the team in building cutting-edge POS systems.",
       image: "/images/2.jpg",
       email: "austinxduong@gmail.com",
       linkedin: "https://linkedin.com/in/austinxduong",
