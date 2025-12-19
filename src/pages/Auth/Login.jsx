@@ -13,6 +13,7 @@ import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import { validateEmail, validatePassword } from "../../utils/helper";
+import { Link } from "react-router-dom"
 
 const Login = () => {
   const { login } = useAuth();
@@ -267,12 +268,12 @@ const Login = () => {
         <div className="mt-6 pt-4 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-600">
             Don't have an account?{" "}
-            <button
-              className="text-black font-medium hover:underline"
-              onClick={() => navigate("/signup")}
+            <Link   
+            to="/demo"
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:bg-green-800 text-white px-4 py-1 rounded-lg font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg"
             >
-              Sign up
-            </button>
+            Book Demo
+            </Link>
           </p>
         </div>
       </div>

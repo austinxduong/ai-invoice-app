@@ -38,7 +38,12 @@ const App = () => {
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
+
+            <Route path="/signup" element={
+              <ProtectedRoute>
+              <SignUp />
+              </ProtectedRoute>
+              } />
 
 
             <Route path="/dashboard" element={
@@ -97,7 +102,7 @@ const App = () => {
 
           <Route path="/demo" element={
             <DemoBooking />
-            
+
           } />
 
           </Routes>
