@@ -16,7 +16,10 @@ const PaymentFromLink = () => {
     expiryYear: '',
     cvv: '',
     nameOnCard: '',
-    billingEmail: ''
+    billingEmail: '',
+    billingEmailConfirm: '',
+    password: '',
+    passwordConfirm: ''
   });
   
   const [paymentErrors, setPaymentErrors] = useState({});
@@ -32,7 +35,9 @@ const PaymentFromLink = () => {
         // Pre-fill billing email
         setPaymentData(prev => ({
           ...prev,
-          billingEmail: response.data.email
+          billingEmail: response.data.email,
+          billingEmailConfirm: response.data.email,
+          nameOnCard: `${response.data.firstName} ${response.data.lastName}`
         }));
       } catch (error) {
         console.error('❌ Invalid payment link:', error);
@@ -48,7 +53,30 @@ const PaymentFromLink = () => {
   const validatePaymentForm = () => {
     const errors = {};
     
-    // Card number validation (simple)
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!paymentData.billingEmail || !emailRegex.test(paymentData.billingEmail)) {
+      errors.billingEmail = 'Please enter a valid email address';
+    }
+    
+    if (paymentData.billingEmail !== paymentData.billingEmailConfirm) {
+      errors.billingEmailConfirm = 'Email addresses do not match';
+    }
+    
+    // Password validation
+    if (!paymentData.password) {
+      errors.password = 'Password is required';
+    } else if (paymentData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(paymentData.password)) {
+      errors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+    }
+    
+    if (paymentData.password !== paymentData.passwordConfirm) {
+      errors.passwordConfirm = 'Passwords do not match';
+    }
+    
+    // Card number validation
     if (!paymentData.cardNumber || paymentData.cardNumber.replace(/\s/g, '').length !== 16) {
       errors.cardNumber = 'Please enter a valid 16-digit card number';
     }
@@ -111,15 +139,16 @@ const PaymentFromLink = () => {
         throw new Error('Please use a valid test card number: 4242 4242 4242 4242');
       }
       
-      // Call account creation endpoint (now with payment validation)
+      // Call account creation endpoint with user's custom password and email
       const response = await axiosInstance.post('/api/payment/create-account', {
-        email: demoData.email,
+        email: paymentData.billingEmail,
         firstName: demoData.firstName,
         lastName: demoData.lastName,
         company: demoData.companyName,
+        password: paymentData.password,
         paymentLinkId: demoData.demoId,
         paymentData: {
-          cardNumber: cardNumber.slice(-4), // Only store last 4 digits
+          cardNumber: cardNumber.slice(-4),
           paymentAmount: 299,
           currency: 'USD',
           paymentMethod: 'card'
@@ -127,12 +156,11 @@ const PaymentFromLink = () => {
       });
       
       if (response.data.success) {
-        const { tempPassword } = response.data;
         setPaymentStep('success');
         
         // Show success message
         setTimeout(() => {
-          alert(`🎉 Payment Successful & Account Created!\n\nLogin Credentials:\nEmail: ${demoData.email}\nPassword: ${tempPassword}\n\nYou can now login to access your cannabis ERP platform!`);
+          alert(`🎉 Payment Successful & Account Created!\n\nYour login credentials:\nEmail: ${paymentData.billingEmail}\nPassword: [The password you created]\n\nYou can now login to access your cannabis ERP platform!`);
           navigate('/login?account=created');
         }, 1500);
       } else {
@@ -203,7 +231,8 @@ const PaymentFromLink = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-green-800 mb-4">Payment Successful!</h2>
-          <p className="text-green-700 mb-4">Your account is being created...</p>
+          <p className="text-green-700 mb-2">Your account has been created successfully!</p>
+          <p className="text-sm text-green-600 mb-4">You can now login with the credentials you created</p>
           <div className="animate-pulse text-sm text-green-600">Redirecting to login...</div>
         </div>
       </div>
@@ -255,115 +284,184 @@ const PaymentFromLink = () => {
           </div>
 
           <form onSubmit={handlePaymentSubmit} className="space-y-6">
-            {/* Billing Email */}
+            {/* Account Information Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Billing Email
-              </label>
-              <input
-                type="email"
-                value={paymentData.billingEmail}
-                onChange={(e) => setPaymentData({...paymentData, billingEmail: e.target.value})}
-                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50"
-                readOnly
-              />
-            </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Account Information</h3>
+              
+              {/* Billing Email */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Billing Email *
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="your-email@company.com"
+                    value={paymentData.billingEmail}
+                    onChange={(e) => setPaymentData({...paymentData, billingEmail: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.billingEmail ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {paymentErrors.billingEmail && (
+                    <p className="text-red-500 text-sm mt-1">{paymentErrors.billingEmail}</p>
+                  )}
+                </div>
 
-            {/* Card Number */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Card Number *
-              </label>
-              <input
-                type="text"
-                placeholder="4242 4242 4242 4242"
-                value={paymentData.cardNumber}
-                onChange={(e) => setPaymentData({...paymentData, cardNumber: formatCardNumber(e.target.value)})}
-                className={`w-full p-3 border rounded-lg font-mono ${paymentErrors.cardNumber ? 'border-red-500' : 'border-gray-300'}`}
-                maxLength={19}
-              />
-              {paymentErrors.cardNumber && (
-                <p className="text-red-500 text-sm mt-1">{paymentErrors.cardNumber}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {/* Expiry Month */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Month *
-                </label>
-                <select
-                  value={paymentData.expiryMonth}
-                  onChange={(e) => setPaymentData({...paymentData, expiryMonth: e.target.value})}
-                  className={`w-full p-3 border rounded-lg ${paymentErrors.expiry ? 'border-red-500' : 'border-gray-300'}`}
-                >
-                  <option value="">MM</option>
-                  {Array.from({length: 12}, (_, i) => (
-                    <option key={i+1} value={String(i+1).padStart(2, '0')}>
-                      {String(i+1).padStart(2, '0')}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Email *
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="Confirm your email"
+                    value={paymentData.billingEmailConfirm}
+                    onChange={(e) => setPaymentData({...paymentData, billingEmailConfirm: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.billingEmailConfirm ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {paymentErrors.billingEmailConfirm && (
+                    <p className="text-red-500 text-sm mt-1">{paymentErrors.billingEmailConfirm}</p>
+                  )}
+                </div>
               </div>
 
-              {/* Expiry Year */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Year *
-                </label>
-                <select
-                  value={paymentData.expiryYear}
-                  onChange={(e) => setPaymentData({...paymentData, expiryYear: e.target.value})}
-                  className={`w-full p-3 border rounded-lg ${paymentErrors.expiry ? 'border-red-500' : 'border-gray-300'}`}
-                >
-                  <option value="">YYYY</option>
-                  {Array.from({length: 10}, (_, i) => (
-                    <option key={i} value={new Date().getFullYear() + i}>
-                      {new Date().getFullYear() + i}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Password Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Create Password *
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Min. 8 characters"
+                    value={paymentData.password}
+                    onChange={(e) => setPaymentData({...paymentData, password: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.password ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {paymentErrors.password && (
+                    <p className="text-red-500 text-sm mt-1">{paymentErrors.password}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Must contain uppercase, lowercase, and number
+                  </p>
+                </div>
 
-              {/* CVV */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Password *
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={paymentData.passwordConfirm}
+                    onChange={(e) => setPaymentData({...paymentData, passwordConfirm: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.passwordConfirm ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {paymentErrors.passwordConfirm && (
+                    <p className="text-red-500 text-sm mt-1">{paymentErrors.passwordConfirm}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Information Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Information</h3>
+
+              {/* Card Number */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CVV *
+                  Card Number *
                 </label>
                 <input
                   type="text"
-                  placeholder="123"
-                  value={paymentData.cvv}
-                  onChange={(e) => setPaymentData({...paymentData, cvv: e.target.value.replace(/\D/g, '').slice(0, 3)})}
-                  className={`w-full p-3 border rounded-lg font-mono ${paymentErrors.cvv ? 'border-red-500' : 'border-gray-300'}`}
-                  maxLength={3}
+                  placeholder="4242 4242 4242 4242"
+                  value={paymentData.cardNumber}
+                  onChange={(e) => setPaymentData({...paymentData, cardNumber: formatCardNumber(e.target.value)})}
+                  className={`w-full p-3 border rounded-lg font-mono ${paymentErrors.cardNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  maxLength={19}
                 />
-                {paymentErrors.cvv && (
-                  <p className="text-red-500 text-sm mt-1">{paymentErrors.cvv}</p>
+                {paymentErrors.cardNumber && (
+                  <p className="text-red-500 text-sm mt-1">{paymentErrors.cardNumber}</p>
                 )}
               </div>
-            </div>
 
-            {paymentErrors.expiry && (
-              <p className="text-red-500 text-sm">{paymentErrors.expiry}</p>
-            )}
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                {/* Expiry Month */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Month *
+                  </label>
+                  <select
+                    value={paymentData.expiryMonth}
+                    onChange={(e) => setPaymentData({...paymentData, expiryMonth: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.expiry ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">MM</option>
+                    {Array.from({length: 12}, (_, i) => (
+                      <option key={i+1} value={String(i+1).padStart(2, '0')}>
+                        {String(i+1).padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Name on Card */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Name on Card *
-              </label>
-              <input
-                type="text"
-                placeholder={`${demoData.firstName} ${demoData.lastName}`}
-                value={paymentData.nameOnCard}
-                onChange={(e) => setPaymentData({...paymentData, nameOnCard: e.target.value})}
-                className={`w-full p-3 border rounded-lg ${paymentErrors.nameOnCard ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {paymentErrors.nameOnCard && (
-                <p className="text-red-500 text-sm mt-1">{paymentErrors.nameOnCard}</p>
+                {/* Expiry Year */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Year *
+                  </label>
+                  <select
+                    value={paymentData.expiryYear}
+                    onChange={(e) => setPaymentData({...paymentData, expiryYear: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.expiry ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">YYYY</option>
+                    {Array.from({length: 10}, (_, i) => (
+                      <option key={i} value={new Date().getFullYear() + i}>
+                        {new Date().getFullYear() + i}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* CVV */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CVV *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="123"
+                    value={paymentData.cvv}
+                    onChange={(e) => setPaymentData({...paymentData, cvv: e.target.value.replace(/\D/g, '').slice(0, 3)})}
+                    className={`w-full p-3 border rounded-lg font-mono ${paymentErrors.cvv ? 'border-red-500' : 'border-gray-300'}`}
+                    maxLength={3}
+                  />
+                  {paymentErrors.cvv && (
+                    <p className="text-red-500 text-sm mt-1">{paymentErrors.cvv}</p>
+                  )}
+                </div>
+              </div>
+
+              {paymentErrors.expiry && (
+                <p className="text-red-500 text-sm mt-2">{paymentErrors.expiry}</p>
               )}
+
+              {/* Name on Card */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Name on Card *
+                </label>
+                <input
+                  type="text"
+                  placeholder={`${demoData.firstName} ${demoData.lastName}`}
+                  value={paymentData.nameOnCard}
+                  onChange={(e) => setPaymentData({...paymentData, nameOnCard: e.target.value})}
+                  className={`w-full p-3 border rounded-lg ${paymentErrors.nameOnCard ? 'border-red-500' : 'border-gray-300'}`}
+                />
+                {paymentErrors.nameOnCard && (
+                  <p className="text-red-500 text-sm mt-1">{paymentErrors.nameOnCard}</p>
+                )}
+              </div>
             </div>
 
             {/* General Error */}
@@ -391,7 +489,7 @@ const PaymentFromLink = () => {
           </form>
 
           <p className="text-xs text-gray-500 text-center mt-4">
-            🔒 Secure 256-bit SSL encryption • Your account will be created after successful payment
+            🔒 Secure 256-bit SSL encryption • Your account will be created with the email and password you choose
           </p>
         </div>
       </div>

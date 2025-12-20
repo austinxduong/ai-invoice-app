@@ -25,6 +25,8 @@ import { ReportingProvider } from "./context/ReportingContext";
 import CreateProduct from "./pages/Products/CreateProduct";
 import DemoBooking from "./pages/Demo/DemoBooking";
 import PaymentFromLink from "./pages/Payment/PaymentFromLink";
+import Settings from "./pages/Settings/Settings";
+
 
 const App = () => {
   console.log('🚨 APP COMPONENT LOADING');
@@ -108,6 +110,12 @@ const App = () => {
 
           <Route path="/pay/:token" element={
             <PaymentFromLink />
+          } />
+
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
           } />
           
 
