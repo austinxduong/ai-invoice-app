@@ -1,56 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import axiosInstance from '../../utils/axiosInstance';
 
-const PaymentFromLink = () => {
-  const { token } = useParams();
+// Replace with your actual Stripe publishable key
+const stripePromise = loadStripe('pk_test_YOUR_STRIPE_PUBLISHABLE_KEY_HERE');
+
+// Card element styling
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      color: '#32325d',
+      fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+      fontSmoothing: 'antialiased',
+      fontSize: '16px',
+      '::placeholder': {
+        color: '#aab7c4',
+      },
+    },
+    invalid: {
+      color: '#fa755a',
+      iconColor: '#fa755a',
+    },
+  },
+  hidePostalCode: false,
+};
+
+// Inner payment form component (uses Stripe Elements)
+const PaymentFormContent = ({ demoData }) => {
+  const stripe = useStripe();
+  const elements = useElements();
   const navigate = useNavigate();
-  const [demoData, setDemoData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [paymentLoading, setPaymentLoading] = useState(false);
   
-  // Payment form state
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStep, setPaymentStep] = useState('form');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  
   const [paymentData, setPaymentData] = useState({
-    cardNumber: '',
-    expiryMonth: '',
-    expiryYear: '',
-    cvv: '',
-    nameOnCard: '',
-    billingEmail: '',
-    billingEmailConfirm: '',
+    nameOnCard: `${demoData.firstName} ${demoData.lastName}`,
+    billingEmail: demoData.email,
+    billingEmailConfirm: demoData.email,
     password: '',
     passwordConfirm: ''
   });
   
   const [paymentErrors, setPaymentErrors] = useState({});
-  const [paymentStep, setPaymentStep] = useState('form'); // 'form', 'processing', 'success'
-  const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
-
-  useEffect(() => {
-    const validateToken = async () => {
-      try {
-        console.log('🔍 Validating token:', token);
-        const response = await axiosInstance.get(`/api/payment/validate/${token}`);
-        console.log('✅ Token validated:', response.data);
-        setDemoData(response.data);
-        // Pre-fill billing email
-        setPaymentData(prev => ({
-          ...prev,
-          billingEmail: response.data.email,
-          billingEmailConfirm: response.data.email,
-          nameOnCard: `${response.data.firstName} ${response.data.lastName}`
-        }));
-      } catch (error) {
-        console.error('❌ Invalid payment link:', error);
-        setTimeout(() => navigate('/demo'), 3000);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    validateToken();
-  }, [token, navigate]);
 
   const validatePaymentForm = () => {
     const errors = {};
@@ -78,21 +74,6 @@ const PaymentFromLink = () => {
       errors.passwordConfirm = 'Passwords do not match';
     }
     
-    // Card number validation
-    if (!paymentData.cardNumber || paymentData.cardNumber.replace(/\s/g, '').length !== 16) {
-      errors.cardNumber = 'Please enter a valid 16-digit card number';
-    }
-    
-    // Expiry validation
-    if (!paymentData.expiryMonth || !paymentData.expiryYear) {
-      errors.expiry = 'Please enter expiry date';
-    }
-    
-    // CVV validation
-    if (!paymentData.cvv || paymentData.cvv.length !== 3) {
-      errors.cvv = 'Please enter a valid 3-digit CVV';
-    }
-    
     // Name validation
     if (!paymentData.nameOnCard.trim()) {
       errors.nameOnCard = 'Please enter name on card';
@@ -108,65 +89,82 @@ const PaymentFromLink = () => {
     if (!validatePaymentForm()) {
       return;
     }
+
+    if (!stripe || !elements) {
+      setPaymentErrors({ general: 'Stripe is not loaded yet. Please wait a moment and try again.' });
+      return;
+    }
     
     setPaymentLoading(true);
     setPaymentStep('processing');
     
     try {
-      console.log('💳 Processing payment for:', demoData);
-      
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Validate test card numbers
-      const cardNumber = paymentData.cardNumber.replace(/\s/g, '');
-      
-      // Stripe test card numbers
-      const validTestCards = [
-        '4242424242424242', // Visa success
-        '5555555555554444', // Mastercard success
-        '4000056655665556'  // Visa debit success
-      ];
-      
-      const declinedTestCards = [
-        '4000000000000002', // Generic decline
-        '4000000000009995'  // Insufficient funds
-      ];
-      
-      if (declinedTestCards.includes(cardNumber)) {
-        throw new Error('Your card was declined. Please try a different payment method.');
-      }
-      
-      if (!validTestCards.includes(cardNumber)) {
-        throw new Error('Please use a valid test card number: 4242 4242 4242 4242');
-      }
-      
-      // Call account creation endpoint with user's custom password and email
-      const response = await axiosInstance.post('/api/payment/create-account', {
+      // Step 1: Create payment intent on your backend
+      console.log('💳 Creating payment intent...');
+      const { data: intentData } = await axiosInstance.post('/api/payment/create-payment-intent', {
+        amount: 29900, // $299.00 in cents
+        currency: 'usd',
+        demoId: demoData.demoId,
         email: paymentData.billingEmail,
-        firstName: demoData.firstName,
-        lastName: demoData.lastName,
-        company: demoData.companyName,
-        password: paymentData.password,
-        paymentLinkId: demoData.demoId,
-        paymentData: {
-          cardNumber: cardNumber.slice(-4),
-          paymentAmount: 299,
-          currency: 'USD',
-          paymentMethod: 'card'
-        }
       });
-      
-      if (response.data.success) {
-        setPaymentStep('success');
-        
-        // Show success message
-        setTimeout(() => {
-          alert(`🎉 Payment Successful & Account Created!\n\nYour login credentials:\nEmail: ${paymentData.billingEmail}\nPassword: [The password you created]\n\nYou can now login to access your cannabis ERP platform!`);
-          navigate('/login?account=created');
-        }, 1500);
-      } else {
-        throw new Error(response.data.error || 'Account creation failed');
+
+      if (!intentData.clientSecret) {
+        throw new Error('Failed to create payment intent');
+      }
+
+      console.log('✅ Payment intent created');
+
+      // Step 2: Confirm payment with Stripe
+      console.log('💳 Confirming payment with Stripe...');
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        intentData.clientSecret,
+        {
+          payment_method: {
+            card: elements.getElement(CardElement),
+            billing_details: {
+              name: paymentData.nameOnCard,
+              email: paymentData.billingEmail,
+            },
+          },
+        }
+      );
+
+      if (stripeError) {
+        throw new Error(stripeError.message);
+      }
+
+      console.log('✅ Payment confirmed:', paymentIntent.id);
+
+      // Step 3: Payment successful, create account
+      if (paymentIntent.status === 'succeeded') {
+        console.log('🎉 Creating user account...');
+        const { data: accountData } = await axiosInstance.post('/api/payment/create-account', {
+          email: paymentData.billingEmail,
+          firstName: demoData.firstName,
+          lastName: demoData.lastName,
+          company: demoData.companyName,
+          password: paymentData.password,
+          paymentLinkId: demoData.demoId,
+          paymentIntentId: paymentIntent.id,
+          paymentData: {
+            cardLast4: paymentIntent.charges?.data[0]?.payment_method_details?.card?.last4 || 'xxxx',
+            paymentAmount: 299,
+            currency: 'USD',
+            paymentMethod: 'card',
+            stripeCustomerId: intentData.customerId,
+          }
+        });
+
+        if (accountData.success) {
+          setPaymentStep('success');
+          
+          setTimeout(() => {
+            alert(`🎉 Payment Successful & Account Created!\n\nYour login credentials:\nEmail: ${paymentData.billingEmail}\nPassword: [The password you created]\n\nYou can now login to access your cannabis ERP platform!`);
+            navigate('/login?account=created');
+          }, 1500);
+        } else {
+          throw new Error(accountData.error || 'Account creation failed');
+        }
       }
       
     } catch (error) {
@@ -179,49 +177,6 @@ const PaymentFromLink = () => {
       setPaymentLoading(false);
     }
   };
-
-  const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p>Validating payment link...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!demoData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Invalid or Expired Link</h2>
-          <p className="text-gray-600 mb-6">This payment link is no longer valid or has expired.</p>
-          <button 
-            onClick={() => navigate('/demo')}
-            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
-          >
-            Book New Demo
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (paymentStep === 'success') {
     return (
@@ -270,19 +225,6 @@ const PaymentFromLink = () => {
             <div className="text-3xl font-bold text-green-600">$299</div>
             <div className="text-gray-600">per month</div>
             <div className="text-sm text-gray-500 mt-1">Cancel anytime • 30-day money-back guarantee</div>
-          </div>
-
-          {/* Test Mode Warning */}
-          <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-yellow-800 mb-2">🧪 TEST MODE</h4>
-            <p className="text-sm text-yellow-700 mb-2">
-              Use these test card numbers (no real money will be charged):
-            </p>
-            <div className="text-sm text-yellow-800 font-mono">
-              • 4242 4242 4242 4242 (Success)<br/>
-              • 4000 0000 0000 0002 (Declined)<br/>
-              • Any future expiry date, any 3-digit CVV
-            </div>
           </div>
 
           <form onSubmit={handlePaymentSubmit} className="space-y-6">
@@ -412,88 +354,8 @@ const PaymentFromLink = () => {
             <div className="border-t pt-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Information</h3>
 
-              {/* Card Number */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Card Number *
-                </label>
-                <input
-                  type="text"
-                  placeholder="4242 4242 4242 4242"
-                  value={paymentData.cardNumber}
-                  onChange={(e) => setPaymentData({...paymentData, cardNumber: formatCardNumber(e.target.value)})}
-                  className={`w-full p-3 border rounded-lg font-mono ${paymentErrors.cardNumber ? 'border-red-500' : 'border-gray-300'}`}
-                  maxLength={19}
-                />
-                {paymentErrors.cardNumber && (
-                  <p className="text-red-500 text-sm mt-1">{paymentErrors.cardNumber}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 mt-4">
-                {/* Expiry Month */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Month *
-                  </label>
-                  <select
-                    value={paymentData.expiryMonth}
-                    onChange={(e) => setPaymentData({...paymentData, expiryMonth: e.target.value})}
-                    className={`w-full p-3 border rounded-lg ${paymentErrors.expiry ? 'border-red-500' : 'border-gray-300'}`}
-                  >
-                    <option value="">MM</option>
-                    {Array.from({length: 12}, (_, i) => (
-                      <option key={i+1} value={String(i+1).padStart(2, '0')}>
-                        {String(i+1).padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Expiry Year */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Year *
-                  </label>
-                  <select
-                    value={paymentData.expiryYear}
-                    onChange={(e) => setPaymentData({...paymentData, expiryYear: e.target.value})}
-                    className={`w-full p-3 border rounded-lg ${paymentErrors.expiry ? 'border-red-500' : 'border-gray-300'}`}
-                  >
-                    <option value="">YYYY</option>
-                    {Array.from({length: 10}, (_, i) => (
-                      <option key={i} value={new Date().getFullYear() + i}>
-                        {new Date().getFullYear() + i}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* CVV */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    CVV *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    value={paymentData.cvv}
-                    onChange={(e) => setPaymentData({...paymentData, cvv: e.target.value.replace(/\D/g, '').slice(0, 3)})}
-                    className={`w-full p-3 border rounded-lg font-mono ${paymentErrors.cvv ? 'border-red-500' : 'border-gray-300'}`}
-                    maxLength={3}
-                  />
-                  {paymentErrors.cvv && (
-                    <p className="text-red-500 text-sm mt-1">{paymentErrors.cvv}</p>
-                  )}
-                </div>
-              </div>
-
-              {paymentErrors.expiry && (
-                <p className="text-red-500 text-sm mt-2">{paymentErrors.expiry}</p>
-              )}
-
               {/* Name on Card */}
-              <div className="mt-4">
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Name on Card *
                 </label>
@@ -508,6 +370,19 @@ const PaymentFromLink = () => {
                   <p className="text-red-500 text-sm mt-1">{paymentErrors.nameOnCard}</p>
                 )}
               </div>
+
+              {/* Stripe Card Element */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Card Details *
+                </label>
+                <div className="p-3 border border-gray-300 rounded-lg bg-white">
+                  <CardElement options={CARD_ELEMENT_OPTIONS} />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💳 Powered by Stripe - Your card information is securely processed
+                </p>
+              </div>
             </div>
 
             {/* General Error */}
@@ -520,7 +395,7 @@ const PaymentFromLink = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={paymentLoading || paymentStep === 'processing'}
+              disabled={!stripe || paymentLoading || paymentStep === 'processing'}
               className="w-full bg-green-600 text-white py-4 rounded-lg font-medium text-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               {paymentStep === 'processing' ? (
@@ -535,11 +410,71 @@ const PaymentFromLink = () => {
           </form>
 
           <p className="text-xs text-gray-500 text-center mt-4">
-            🔒 Secure 256-bit SSL encryption • Your account will be created with the email and password you choose
+            🔒 Secure 256-bit SSL encryption powered by Stripe
           </p>
         </div>
       </div>
     </div>
+  );
+};
+
+// Main wrapper component
+const PaymentFromLink = () => {
+  const { token } = useParams();
+  const navigate = useNavigate();
+  const [demoData, setDemoData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const validateToken = async () => {
+      try {
+        console.log('🔍 Validating token:', token);
+        const response = await axiosInstance.get(`/api/payment/validate/${token}`);
+        console.log('✅ Token validated:', response.data);
+        setDemoData(response.data);
+      } catch (error) {
+        console.error('❌ Invalid payment link:', error);
+        setTimeout(() => navigate('/demo'), 3000);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    validateToken();
+  }, [token, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Validating payment link...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!demoData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Invalid or Expired Link</h2>
+          <p className="text-gray-600 mb-6">This payment link is no longer valid or has expired.</p>
+          <button 
+            onClick={() => navigate('/demo')}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+          >
+            Book New Demo
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Elements stripe={stripePromise}>
+      <PaymentFormContent demoData={demoData} />
+    </Elements>
   );
 };
 
