@@ -40,7 +40,7 @@ export const productApi = {
             if (filters.sortBy) params.append('sortBy', filters.sortBy);
 
             const queryString = params.toString();
-            const url = queryString ? `/api/products?${queryString}` : '/api/products'; // FIXED: added /api
+            const url = queryString ? `/products?${queryString}` : '/products'; // FIXED: added /api
 
             console.log('🔍 Making API request to:', `${BASE_URL}${url}`); // Debug log
             const response = await axiosInstance.get(url);

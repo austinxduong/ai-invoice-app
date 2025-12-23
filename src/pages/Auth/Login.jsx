@@ -102,14 +102,21 @@ const Login = () => {
     setSuccess("");
 
     try {
+      console.log('🔍 AUTH path:', API_PATHS.AUTH);
+      console.log('🔍 LOGIN path:', API_PATHS.AUTH.LOGIN);
+      
       const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, formData);
 
       if (response.status === 200) {
         const { token } = response.data;
 
+          console.log('🔍 Login response:', response.data);
+          console.log('🔍 Token:', token);
+          console.log('🔍 User data:', response.data.user);
+
         if (token) {
           setSuccess("Login successful");
-          login(response.data, token);
+          login(response.data.user, token);
 
           // Redirect based on role
           setTimeout(() => {

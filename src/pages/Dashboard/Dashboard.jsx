@@ -6,6 +6,63 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import Button from "../../components/ui/Button"
 import AIInsightsCard from "../../components/AIInsightsCard";
+import { Building2, CreditCard, Users } from "lucide-react";
+
+// NEW: Organization Info Card Component
+const OrganizationInfoCard = ({ user }) => {
+  if (!user) return null;
+
+  return (
+    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-lg shadow-gray-100">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-900">Organization</h3>
+        <div className="flex items-center text-sm text-slate-500">
+          <Building2 className="w-4 h-4 mr-1" />
+          {user.role}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {/* Company Name */}
+        <div>
+          <div className="text-xs text-slate-500 mb-1">Company Name</div>
+          <div className="text-sm font-medium text-slate-900">
+            {user.organizationName || 'N/A'}
+          </div>
+        </div>
+
+        {/* Customer Code */}
+        <div>
+          <div className="text-xs text-slate-500 mb-1">Customer Code</div>
+          <div className="text-sm font-mono text-slate-900 bg-slate-50 px-2 py-1 rounded">
+            {user.organizationId || 'N/A'}
+          </div>
+        </div>
+
+        {/* Subscription Info */}
+        <div className="flex gap-4 pt-2 border-t border-slate-200">
+          <div className="flex-1">
+            <div className="text-xs text-slate-500 mb-1">Plan</div>
+            <div className="text-sm font-medium text-slate-900 capitalize">
+              {user.subscriptionPlan || 'N/A'}
+            </div>
+          </div>
+          <div className="flex-1">
+            <div className="text-xs text-slate-500 mb-1">Status</div>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+              user.subscriptionStatus === 'active' ? 'bg-emerald-100 text-emerald-800' :
+              user.subscriptionStatus === 'trialing' ? 'bg-blue-100 text-blue-800' :
+              user.subscriptionStatus === 'past_due' ? 'bg-amber-100 text-amber-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {user.subscriptionStatus || 'N/A'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Dashboard = () => {
 
@@ -19,7 +76,22 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const [user, setUser] = useState(null);
+
   useEffect(() => {
+    // Load user from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+        console.log('👤 User loaded:', userData);
+        console.log('🏢 Organization:', userData.organizationId);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+
     const fetchDashboardData = async () => {
       try {
         const response = await axiosInstance.get(
@@ -49,11 +121,10 @@ const Dashboard = () => {
           .slice(0, 5)
         );
       } catch (error) {
-        console.error("Failed to fetch dashboard date", error);
+        console.error("Failed to fetch dashboard data", error);
       } finally {
         setLoading(false);
       }
-
     };
 
     fetchDashboardData();
@@ -132,6 +203,9 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      {/* NEW: Add Organization Info Card ⬇️ */}
+      <OrganizationInfoCard user={user} />
 
       <AIInsightsCard/>
 
