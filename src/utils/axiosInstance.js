@@ -1,7 +1,16 @@
 // frontend/src/utils/axiosInstance.js
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Auto-detect environment (REMOVE the duplicate above)
+const isDevelopment = import.meta.env.MODE === 'development';
+const API_URL = import.meta.env.VITE_API_URL || 
+  (isDevelopment 
+    ? 'http://localhost:8000/api' 
+    : 'https://crustless-diastrophic-thi.ngrok-free.dev/api'
+  );
+
+console.log('🔧 Environment:', import.meta.env.MODE);
+console.log('🔧 API_URL configured:', API_URL);
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -88,4 +97,3 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
-
