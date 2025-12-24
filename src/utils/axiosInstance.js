@@ -1,7 +1,7 @@
 // frontend/src/utils/axiosInstance.js
 import axios from 'axios';
 
-// Auto-detect environment (REMOVE the duplicate above)
+// Auto-detect environment
 const isDevelopment = import.meta.env.MODE === 'development';
 const API_URL = import.meta.env.VITE_API_URL || 
   (isDevelopment 
@@ -17,6 +17,7 @@ const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',  // ← ADD THIS LINE to bypass ngrok warning
   },
 });
 
