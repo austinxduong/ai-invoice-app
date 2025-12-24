@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Package } from 'lucide-react';
 import productApi from '../services/productApi';
 import { usePOSTransaction } from '../context/POSTransaction';
-// import { productApi } from '../../../services/productApi';
-// import { usePOSTransaction } from '../../../context/POSTransactionContext';
 
 const ProductSearch = () => {
   const [products, setProducts] = useState([]);
@@ -20,9 +18,18 @@ const ProductSearch = () => {
       const response = await productApi.getProducts({
         search,
         limit: 20,
-        inStock: true
+        // ❌ REMOVED: inStock: true  (this filter doesn't work with new schema)
+        // Instead, we'll filter in the frontend
       });
-      setProducts(response.products || []);
+      
+      // Filter products with stock in frontend
+      const inStockProducts = (response.products || []).filter(p => {
+        const stock = p.stockQuantity !== undefined ? p.stockQuantity : (p.inventory?.currentStock || 0);
+        return stock > 0;
+      });
+      
+      setProducts(inStockProducts);
+      console.log('📦 Loaded products:', inStockProducts.length);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
@@ -42,9 +49,16 @@ const ProductSearch = () => {
 
   // Add to transaction
   const handleAddToTransaction = (product) => {
-    const pricing = selectedPricing[product._id] || product.pricing?.[0];
+    // Handle both old schema (pricing array) and new schema (single price)
+    const pricing = selectedPricing[product._id] || 
+                   product.pricing?.[0] || 
+                   {
+                     price: product.price || 0,
+                     weight: 1,
+                     unit: product.unit || 'unit'
+                   };
     
-    if (!pricing) {
+    if (!pricing || !pricing.price) {
       alert('Please select a size for this product');
       return;
     }
@@ -102,6 +116,13 @@ const ProductSearch = () => {
         {products.map((product) => {
           const selectedPrice = selectedPricing[product._id];
           
+          // ✅ Handle both old and new schema
+          const stock = product.stockQuantity !== undefined ? product.stockQuantity : (product.inventory?.currentStock || 0);
+          const unit = product.unit || product.inventory?.unit || 'units';
+          const thc = product.thcContent !== undefined ? product.thcContent : (product.cannabinoids?.thcPercentage || 0);
+          const cbd = product.cbdContent !== undefined ? product.cbdContent : (product.cannabinoids?.cbdPercentage || 0);
+          const price = product.price || product.pricing?.[0]?.price || 0;
+          
           return (
             <div key={product._id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
               {/* Product Image */}
@@ -121,7 +142,7 @@ const ProductSearch = () => {
                 {/* Stock Badge */}
                 <div className="absolute top-2 right-2">
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                    {product.inventory?.currentStock || 0} in stock
+                    {stock} in stock
                   </span>
                 </div>
               </div>
@@ -144,23 +165,21 @@ const ProductSearch = () => {
                 </div>
 
                 {/* THC/CBD */}
-                {product.cannabinoids && (
-                  <div className="flex space-x-3 text-xs mb-3">
-                    {product.cannabinoids.thcPercentage > 0 && (
-                      <span className="text-green-600">
-                        THC: {product.cannabinoids.thcPercentage}%
-                      </span>
-                    )}
-                    {product.cannabinoids.cbdPercentage > 0 && (
-                      <span className="text-blue-600">
-                        CBD: {product.cannabinoids.cbdPercentage}%
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="flex space-x-3 text-xs mb-3">
+                  {thc > 0 && (
+                    <span className="text-green-600">
+                      THC: {thc}%
+                    </span>
+                  )}
+                  {cbd > 0 && (
+                    <span className="text-blue-600">
+                      CBD: {cbd}%
+                    </span>
+                  )}
+                </div>
 
-                {/* Pricing Selection */}
-                {product.pricing?.length > 0 && (
+                {/* Pricing Display - Show single price or dropdown */}
+                {product.pricing?.length > 0 ? (
                   <div className="mb-3">
                     <select
                       value={selectedPrice ? JSON.stringify(selectedPrice) : ''}
@@ -178,16 +197,25 @@ const ProductSearch = () => {
                       ))}
                     </select>
                   </div>
+                ) : (
+                  <div className="mb-3">
+                    <div className="text-lg font-bold text-green-600">
+                      ${price.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      per {unit}
+                    </div>
+                  </div>
                 )}
 
                 {/* Add Button */}
                 <button
                   onClick={() => handleAddToTransaction(product)}
-                  disabled={!selectedPrice}
+                  disabled={product.pricing?.length > 0 && !selectedPrice}
                   className={`w-full flex items-center justify-center space-x-2 py-2 px-4 rounded-lg font-medium transition-colors ${
-                    selectedPrice
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    (product.pricing?.length > 0 && !selectedPrice)
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
                 >
                   <Plus className="h-4 w-4" />
@@ -204,7 +232,9 @@ const ProductSearch = () => {
         <div className="text-center py-12">
           <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-          <p className="text-gray-500">Try adjusting your search terms</p>
+          <p className="text-gray-500">
+            {searchTerm ? 'Try adjusting your search terms' : 'No products in stock'}
+          </p>
         </div>
       )}
     </div>

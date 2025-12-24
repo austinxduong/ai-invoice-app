@@ -194,6 +194,20 @@ useEffect(() => {
     if (onSave) {
       await onSave(finalFormData);
     } else {
+
+        // 🐛 ADD THIS DEBUG CODE HERE ⬇️
+      console.log('📋 Full Form Data:', formData);
+      console.log('📋 Invoice Number:', formData.invoiceNumber);
+      console.log('📋 Invoice Date:', formData.invoiceDate);
+      console.log('📋 Due Date:', formData.dueDate);
+      console.log('📋 Bill From:', formData.billFrom);
+      console.log('📋 Bill To:', formData.billTo);
+      console.log('📋 Number of items:', formData.items.length);
+      console.log('📋 First Item:', formData.items[0]);
+      console.log('📋 Notes:', formData.notes);
+      console.log('📋 Payment Terms:', formData.paymentTerms);
+      // 🐛 END DEBUG CODE ⬆️
+
       try {
         await axiosInstance.post(API_PATHS.INVOICE.CREATE, finalFormData);
         toast.success("Invoice created successfully!");

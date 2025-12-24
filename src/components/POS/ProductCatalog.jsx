@@ -358,7 +358,139 @@ const parseCSV = (csvText) => {
   return data;
 };
 
-// Convert CSV row to product object
+// ✅ UPDATED: Transform CSV product data to match Product model with PRICING ARRAY
+const transformProductForModel = (csvProduct) => {
+  // Map CSV categories to Product model enum values
+  const categoryMap = {
+    'edible': 'edibles',
+    'concentrate': 'concentrates',
+    'pre-roll': 'accessories',
+    'topical': 'topicals',
+    'flower': 'flower',
+    'accessory': 'accessories'
+  };
+  
+  // Map CSV units to Product model enum values
+  const unitMap = {
+    'each': 'each',
+    'gram': 'gram',
+    'g': 'gram',
+    'eighth': 'eighth',
+    'quarter': 'quarter',
+    'half': 'half',
+    'oz': 'ounce',
+    'ounce': 'ounce',
+    'lb': 'pound',
+    'pound': 'pound',
+    'kg': 'kilogram',
+    'kilogram': 'kilogram',
+    'l': 'liter',
+    'liter': 'liter',
+    'ml': 'milliliter',
+    'milliliter': 'milliliter',
+    'package': 'package',
+    'unit': 'unit'
+  };
+  
+  // ✅ PRESERVE ALL PRICING OPTIONS
+  let pricingArray = [];
+  
+  if (csvProduct.pricing && csvProduct.pricing.length > 0) {
+    // Map all pricing options from CSV
+    pricingArray = csvProduct.pricing.map(p => ({
+      unit: unitMap[p.unit?.toLowerCase()] || 'unit',
+      weight: p.weight || 1,
+      price: p.price || 0
+    }));
+  } else {
+    // Fallback: create single pricing option
+    pricingArray = [{
+      unit: 'unit',
+      weight: 1,
+      price: 0
+    }];
+  }
+  
+  // Get inventory unit and map to valid enum
+  const csvUnit = (csvProduct.inventory?.unit || 'unit').toLowerCase();
+  const validUnit = unitMap[csvUnit] || 'unit';
+  
+  // Parse effects and flavors
+  const effects = csvProduct.effects || [];
+  const flavors = csvProduct.flavors || [];
+
+  const parseDate = (dateStr) => {
+  if (!dateStr || dateStr.trim() === '') return null;
+  try {
+    const parsed = new Date(dateStr);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  } catch {
+    return null;
+  }
+};
+  
+  // Transform to match Product.js model structure
+  return {
+    name: csvProduct.name,
+    sku: csvProduct.sku,
+    description: csvProduct.description || '',
+    
+    // Fix category enum
+    category: categoryMap[csvProduct.category?.toLowerCase()] || 'other',
+    subcategory: csvProduct.subcategory || '',
+    
+    // ✅ Multiple pricing options
+    pricing: pricingArray,
+    
+    // Cost
+    cost: 0,  // Default cost
+    
+    // Map inventory structure with VALID unit
+    stockQuantity: csvProduct.inventory?.currentStock || 0,
+    lowStockThreshold: csvProduct.inventory?.lowStockAlert || 10,
+    unit: validUnit,
+    
+    // Cannabis-specific fields
+    thcContent: csvProduct.cannabinoids?.thcPercentage || null,
+    cbdContent: csvProduct.cannabinoids?.cbdPercentage || null,
+    strain: csvProduct.name,
+    strainType: csvProduct.subcategory === 'indica' ? 'indica' : 
+                csvProduct.subcategory === 'sativa' ? 'sativa' :
+                csvProduct.subcategory === 'hybrid' ? 'hybrid' : null,
+    
+    // Additional cannabis fields
+    effects: effects,
+    flavors: flavors,
+    
+    // Compliance
+    compliance: {
+      batchNumber: csvProduct.compliance?.batchNumber || '',
+      labTested: csvProduct.compliance?.labTested || false,
+      licensedProducer: csvProduct.compliance?.licensedProducer || '',
+      harvestDate: parseDate(csvProduct.compliance?.harvestDate),     // ✅ Use parseDate!
+      packagedDate: parseDate(csvProduct.compliance?.packagedDate),   // ✅ Use parseDate!
+      expirationDate: parseDate(csvProduct.compliance?.expirationDate), // ✅ Use parseDate!
+      stateTrackingId: csvProduct.compliance?.stateTrackingId || ''
+    },
+    
+    // Supplier
+    supplier: {
+      name: csvProduct.supplier?.name || '',
+      contact: csvProduct.supplier?.contact || '',
+      license: csvProduct.supplier?.license || ''
+    },
+    
+    // Status
+    isActive: csvProduct.isActive !== false,
+    isAvailable: csvProduct.isAvailable !== false,
+    
+    // Images (if any)
+    images: csvProduct.images || []
+  };
+};
+
+// ✅ CORRECTED convertRowToProduct - Reads CSV columns in the right order
+
 const convertRowToProduct = (row, rowIndex) => {
   try {
     return {
@@ -382,20 +514,25 @@ const convertRowToProduct = (row, rowIndex) => {
       pricing: parsePricingOptions(row['Pricing Options']),
       effects: row['Effects'] ? row['Effects'].split(',').map(e => e.trim().toLowerCase()) : [],
       flavors: row['Flavors'] ? row['Flavors'].split(',').map(f => f.trim()) : [],
+      
+      // ✅ FIX: Compliance fields in correct order
       compliance: {
         batchNumber: row['Batch Number'] || '',
         labTested: row['Lab Tested']?.toLowerCase() === 'yes',
         licensedProducer: row['Licensed Producer'] || '',
-        harvestDate: row['Harvest Date'] || '',
-        packagedDate: row['Packaged Date'] || '',
-        expirationDate: row['Expiration Date'] || '',
+        harvestDate: row['Harvest Date'] || '',        // ← Correct column
+        packagedDate: row['Packaged Date'] || '',      // ← Correct column
+        expirationDate: row['Expiration Date'] || '',  // ← Correct column
         stateTrackingId: row['State Tracking ID'] || '',
       },
+      
+      // ✅ FIX: Supplier fields
       supplier: {
         name: row['Supplier Name'] || '',
         contact: row['Supplier Contact'] || '',
         license: row['Supplier License'] || '',
       },
+      
       isActive: row['Active']?.toLowerCase() !== 'no',
       isAvailable: row['Available']?.toLowerCase() !== 'no',
     };
@@ -411,6 +548,7 @@ const parsePricingOptions = (pricingText) => {
   
   try {
     const options = pricingText.split(';').map(option => {
+      // Match patterns like "1g (gram) - $18" or "3.5g (eighth) - $55"
       const match = option.match(/(\d+\.?\d*)g\s*\((\w+)\)\s*-\s*\$(\d+\.?\d*)/);
       if (match) {
         return {
@@ -427,6 +565,22 @@ const parsePricingOptions = (pricingText) => {
     return [{ unit: 'gram', weight: 1, price: 0 }];
   }
 };
+
+
+// ✅ DEBUG VERSION: Add logging to see what's being parsed
+const convertRowToProductDebug = (row, rowIndex) => {
+  console.log('🔍 CSV Row:', {
+    'Batch Number': row['Batch Number'],
+    'Lab Tested': row['Lab Tested'],
+    'Licensed Producer': row['Licensed Producer'],
+    'Harvest Date': row['Harvest Date'],
+    'Packaged Date': row['Packaged Date'],
+    'Expiration Date': row['Expiration Date']
+  });
+  
+  return convertRowToProduct(row, rowIndex);
+};
+
 
 // Validate import data
 const validateImportData = async (data) => {
@@ -522,14 +676,13 @@ const handleFinalImport = async () => {
   setImportLoading(true);
   
   try {
-    let successCount = 0;
-    let errorCount = 0;
-    const importErrors = [];
+    // Prepare products for bulk import
+    const productsToImport = [];
+    const productsToUpdate = [];
     
     for (let i = 0; i < importData.length; i++) {
       // Skip rows with validation errors
       if (validationErrors[i]) {
-        errorCount++;
         continue;
       }
       
@@ -541,27 +694,58 @@ const handleFinalImport = async () => {
         continue;
       }
       
+      // ✅ Transform product data to match current model
+      const transformedProduct = transformProductForModel(product);
+      
+      // ✅ Use transformedProduct, not product!
+      const productData = {
+        ...transformedProduct  // ← FIXED: Use transformed data
+      };
+      
+      if (duplicate && duplicate.action === 'replace') {
+        // Add to update list
+        productsToUpdate.push({
+          id: duplicate.existingProduct._id,
+          data: productData
+        });
+      } else {
+        // Add to create list
+        productsToImport.push(productData);
+      }
+    }
+    
+    // 🐛 DEBUG - Now it's AFTER creating the array
+    if (productsToImport.length > 0) {
+      console.log('🔍 First product being sent:', productsToImport[0]);
+      console.log('🔍 Category:', productsToImport[0].category);
+      console.log('🔍 Price:', productsToImport[0].price);
+      console.log('🔍 SKU:', productsToImport[0].sku);
+    }
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // Bulk import new products
+    if (productsToImport.length > 0) {
+      console.log(`📦 Bulk importing ${productsToImport.length} new products...`);
       try {
-        const productData = {
-          ...product,
-          createdBy: 'import-user' // You might want to use actual user ID
-        };
-        
-        // Remove rowIndex before sending to API
-        delete productData.rowIndex;
-        
-        if (duplicate && duplicate.action === 'replace') {
-          // Update existing product
-          await productApi.updateProduct(duplicate.existingProduct._id, productData);
-        } else {
-          // Create new product
-          await productApi.createProduct(productData);
-        }
-        
+        const result = await productApi.bulkImportProducts(productsToImport);
+        successCount += result.successCount || 0;
+        errorCount += result.errorCount || 0;
+        console.log('✅ Bulk import result:', result);
+      } catch (error) {
+        console.error('❌ Bulk import failed:', error);
+        errorCount += productsToImport.length;
+      }
+    }
+    
+    // Update existing products (one by one for now)
+    for (const update of productsToUpdate) {
+      try {
+        await productApi.updateProduct(update.id, update.data);
         successCount++;
       } catch (error) {
-        console.error('Error importing product:', error);
-        importErrors.push({ row: i + 2, name: product.name, error: error.message });
+        console.error('Error updating product:', error);
         errorCount++;
       }
     }
