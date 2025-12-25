@@ -1,5 +1,5 @@
 // frontend/src/components/POS/ProductCard.jsx
-// ✅ FIXED: Shows ALL effects + Consistent card heights
+// ✅ COMPLETE: Shows ALL effects + Category/Subcategory labels + Consistent heights
 
 import React, { useState } from 'react';
 import { Package } from 'lucide-react';
@@ -61,11 +61,6 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
         <div className={`absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-medium ${stockStatus.color}`}>
           {stockStatus.label}
         </div>
-
-        {/* Category Badge */}
-        <div className="absolute top-2 left-2 px-2 py-1 rounded-md text-xs font-medium bg-white text-gray-700 capitalize">
-          {product.subcategory || product.category}
-        </div>
       </div>
 
       {/* Product Info */}
@@ -77,6 +72,24 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
 
         {/* SKU */}
         <p className="text-xs text-gray-500 mb-3">SKU: {product.sku}</p>
+
+        {/* ✅ Category & Subcategory with Labels */}
+        <div className="mb-3 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-500">Category:</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-800 capitalize">
+              {product.category}
+            </span>
+          </div>
+          {product.subcategory && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-500">Subcategory</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                {product.subcategory}
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Cannabinoids */}
         {(thc > 0 || cbd > 0) && (
@@ -94,7 +107,7 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
           </div>
         )}
 
-        {/* ✅ FIX 1: Show ALL Effects (not just first one) */}
+        {/* ✅ Show ALL Effects */}
         {effects.length > 0 && (
           <div className="mb-3">
             <div className="flex flex-wrap gap-1">
@@ -110,7 +123,7 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
           </div>
         )}
 
-        {/* ✅ FIX 2: Always show pricing section (with or without dropdown) */}
+        {/* ✅ Pricing Section - Always consistent height */}
         <div className="mt-auto">
           {/* Pricing Selector - If multiple pricing options */}
           {product.pricing && product.pricing.length > 1 ? (
@@ -138,10 +151,8 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
               </select>
             </div>
           ) : (
-            // ✅ FIX: Add placeholder div to maintain consistent height
-            <div className="mb-3 h-[52px]">
-              {/* Empty space for alignment - same height as dropdown + label */}
-            </div>
+            // ✅ Placeholder div to maintain consistent height
+            <div className="mb-3 h-[52px]"></div>
           )}
 
           {/* Price Display */}

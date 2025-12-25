@@ -34,15 +34,16 @@ const navigate = useNavigate();
   });
 
   // Cannabis categories
-  const categories = [
-    { value: '', label: 'All Categories' },
-    { value: 'flower', label: 'Flower' },
-    { value: 'edible', label: 'Edibles' },
-    { value: 'concentrate', label: 'Concentrates' },
-    { value: 'pre-roll', label: 'Pre-Rolls' },
-    { value: 'topical', label: 'Topicals' },
-    { value: 'accessory', label: 'Accessories' }
-  ];
+const categories = [
+  { value: '', label: 'All Categories' },
+  { value: 'flower', label: 'Flower' },
+  { value: 'pre-rolls', label: "Pre-Rolls"},
+  { value: 'edibles', label: 'Edibles' },           // ✅ Fixed
+  { value: 'concentrates', label: 'Concentrates' }, // ✅ Fixed
+  { value: 'topicals', label: 'Topicals' },        // ✅ Fixed
+  { value: 'accessories', label: 'Accessories' },   // ✅ Fixed
+  { value: 'other', label: 'Other' }               // ✅ Added
+];
 
   // Load products
   const loadProducts = async (newFilters = filters, page = 1) => {
