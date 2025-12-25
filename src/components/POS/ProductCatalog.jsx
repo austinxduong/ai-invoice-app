@@ -162,59 +162,35 @@ const exportProducts = async () => {
   }
 };
 
-// Convert products array to CSV string
 const convertProductsToCSV = (products) => {
-  // Define CSV headers
   const headers = [
-    'Name',
-    'SKU', 
-    'Category',
-    'Subcategory',
-    'Description',
-    'THC %',
-    'CBD %',
-    'THC mg',
-    'CBD mg',
-    'Current Stock',
-    'Stock Unit',
-    'Low Stock Alert',
-    'Pricing Options',
-    'Effects',
-    'Flavors',
-    'Batch Number',
-    'Lab Tested',
-    'Licensed Producer',
-    'Harvest Date',
-    'Packaged Date',
-    'Expiration Date',
-    'State Tracking ID',
-    'Supplier Name',
-    'Supplier Contact',
-    'Supplier License',
-    'Active',
-    'Available',
-    'Created Date',
-    'Images Count'
+    'Name', 'SKU', 'Category', 'Subcategory', 'Description',
+    'THC %', 'CBD %', 'THC mg', 'CBD mg',
+    'Current Stock', 'Stock Unit', 'Low Stock Alert',
+    'Pricing Options', 'Effects', 'Flavors',
+    'Batch Number', 'Lab Tested', 'Licensed Producer',
+    'Harvest Date', 'Packaged Date', 'Expiration Date',
+    'State Tracking ID', 'Supplier Name', 'Supplier Contact',
+    'Supplier License', 'Active', 'Available', 'Created Date', 'Images Count'
   ];
   
-  // Convert products to CSV rows
   const rows = products.map(product => {
-    // Format pricing options
+    // ✅ Format pricing options
     const pricingText = product.pricing?.map(p => 
       `${p.weight}g (${p.unit}) - $${p.price}`
     ).join('; ') || '';
     
-    // Format effects and flavors
+    // ✅ Format effects and flavors
     const effectsText = product.effects?.join(', ') || '';
     const flavorsText = product.flavors?.join(', ') || '';
     
-    // Format dates
+    // ✅ Format dates
     const formatDate = (dateStr) => {
       if (!dateStr) return '';
       try {
         return new Date(dateStr).toLocaleDateString();
       } catch {
-        return dateStr;
+        return '';
       }
     };
     
@@ -223,15 +199,15 @@ const convertProductsToCSV = (products) => {
       product.sku || '',
       product.category || '',
       product.subcategory || '',
-      (product.description || '').replace(/,/g, ';'), // Replace commas to avoid CSV issues
-      product.cannabinoids?.thcPercentage || '',
-      product.cannabinoids?.cbdPercentage || '',
-      product.cannabinoids?.thcMg || '',
-      product.cannabinoids?.cbdMg || '',
-      product.inventory?.currentStock || '',
-      product.inventory?.unit || '',
-      product.inventory?.lowStockAlert || '',
-      pricingText.replace(/,/g, ';'), // Replace commas in pricing
+      (product.description || '').replace(/,/g, ';'),
+      product.thcContent || '',              // ✅ NEW schema
+      product.cbdContent || '',              // ✅ NEW schema
+      '',                                     // THC mg (not in new schema)
+      '',                                     // CBD mg (not in new schema)
+      product.stockQuantity || '',           // ✅ NEW schema
+      product.unit || '',                    // ✅ NEW schema
+      product.lowStockThreshold || '',       // ✅ NEW schema
+      pricingText,
       effectsText,
       flavorsText,
       product.compliance?.batchNumber || '',
@@ -251,7 +227,6 @@ const convertProductsToCSV = (products) => {
     ];
   });
   
-  // Combine headers and rows
   const csvContent = [headers, ...rows]
     .map(row => row.map(field => `"${field}"`).join(','))
     .join('\n');
@@ -333,16 +308,41 @@ const handleFileUpload = (event) => {
   reader.readAsText(file);
 };
 
-// Parse CSV content
 const parseCSV = (csvText) => {
   const lines = csvText.split('\n').filter(line => line.trim());
   if (lines.length < 2) return []; // Need at least header + 1 data row
   
-  const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+  // ✅ Parse CSV line respecting quotes
+  const parseCSVLine = (line) => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    // Push last field
+    result.push(current.trim());
+    
+    return result;
+  };
+  
+  const headers = parseCSVLine(lines[0]);
   const data = [];
   
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+    const values = parseCSVLine(lines[i]);
+    
     if (values.length < headers.length) continue; // Skip incomplete rows
     
     const row = {};
@@ -1362,196 +1362,277 @@ const handleFinalImport = async () => {
           )}
         </>
       )}
-            {showDetailModal && selectedProduct && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0  bg-opacity-50 transition-opacity"
-            onClick={closeDetailModal}
-          />
-          
-          {/* Modal */}
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+  {/* ✅ COMPLETE PRODUCT DETAIL MODAL - Replace entire modal section */}
+{showDetailModal && selectedProduct && (
+  <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="absolute inset-0 bg-black bg-opacity-50" onClick={closeDetailModal} />
+    
+    <div className="absolute inset-0 flex items-center justify-center p-4">
+      <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <h2 className="text-2xl font-bold text-gray-900">Product Details</h2>
+          <button onClick={closeDetailModal} className="p-2 hover:bg-gray-100 rounded-full">
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
 
-              
-              {/* Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
-                <h2 className="text-2xl font-bold text-gray-900">Product Details</h2>
-                <button
-                  onClick={closeDetailModal}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
+        {/* Content */}
+        <div className="p-6">
+          {/* Product Image */}
+          <div className="mb-6">
+            {selectedProduct.images?.[0] ? (
+              <img 
+                src={selectedProduct.images[0].url} 
+                alt={selectedProduct.name}
+                className="w-full h-64 object-cover rounded-lg"
+              />
+            ) : (
+              <div className="w-full h-64 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
+                <Package className="h-16 w-16 text-green-600" />
               </div>
+            )}
+          </div>
 
-              {/* Content */}
-              <div className="p-6">
-                {/* Product Image */}
-                <div className="mb-6">
-                  {selectedProduct.images?.[0] ? (
-                    <img 
-                      src={selectedProduct.images[0].url} 
-                      alt={selectedProduct.name}
-                      className="w-full h-64 object-cover rounded-lg"
-                      onError={(e) => {
-                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedProduct.name)}&size=400&background=10b981&color=ffffff&bold=true`;
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-64 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
-                      <Package className="h-16 w-16 text-green-600" />
-                    </div>
-                  )}
+          <div className="space-y-6">
+            {/* Basic Info */}
+            <div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">{selectedProduct.name}</h3>
+              
+              {/* ✅ Category & Subcategory with Labels */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <span className="text-xs font-medium text-gray-500 uppercase">Category</span>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 capitalize">
+                      {selectedProduct.category}
+                    </span>
+                  </div>
                 </div>
-
-                {/* Product Info */}
-                <div className="space-y-6">
-                  {/* Basic Info */}
+                {selectedProduct.subcategory && (
                   <div>
-                    <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedProduct.name}</h3>
-                    <div className="flex flex-wrap gap-3 mb-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                        {selectedProduct.category}
+                    <span className="text-xs font-medium text-gray-500 uppercase">Subcategory</span>
+                    <div className="mt-1">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 capitalize">
+                        {selectedProduct.subcategory}
                       </span>
-                      {selectedProduct.subcategory && (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                          {selectedProduct.subcategory}
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-gray-700">SKU:</span> {selectedProduct.sku}
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-700">Stock:</span> {selectedProduct.inventory?.currentStock || 0} {selectedProduct.inventory?.unit || 'units'}
-                      </div>
                     </div>
                   </div>
-
-                  {/* Cannabinoids */}
-                  {selectedProduct.cannabinoids && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                        <Info className="h-4 w-4 mr-2" />
-                        Cannabinoid Profile
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        {selectedProduct.cannabinoids.thcPercentage > 0 && (
-                          <div>
-                            <span className="block text-sm font-medium text-gray-700">THC</span>
-                            <span className="text-lg font-bold text-green-600">{selectedProduct.cannabinoids.thcPercentage}%</span>
-                          </div>
-                        )}
-                        {selectedProduct.cannabinoids.cbdPercentage > 0 && (
-                          <div>
-                            <span className="block text-sm font-medium text-gray-700">CBD</span>
-                            <span className="text-lg font-bold text-blue-600">{selectedProduct.cannabinoids.cbdPercentage}%</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Effects */}
-                  {selectedProduct.effects?.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Effects</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedProduct.effects.map((effect, index) => (
-                          <span 
-                            key={index}
-                            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800"
-                          >
-                            {effect}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Description */}
-                  {selectedProduct.description && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Description</h4>
-                      <p className="text-gray-600 leading-relaxed">{selectedProduct.description}</p>
-                    </div>
-                  )}
-
-                  {/* Pricing */}
-                  {selectedProduct.pricing?.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Available Sizes & Pricing</h4>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="space-y-2">
-                          {selectedProduct.pricing.map((pricing, index) => (
-                            <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                              <div>
-                                <span className="font-medium">{pricing.weight}g</span>
-                                {pricing.unit && (
-                                  <span className="text-gray-500 text-sm ml-2">({pricing.unit})</span>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <span className="text-lg font-bold text-green-600">${pricing.price}</span>
-                                <div className="text-xs text-gray-500">
-                                  ${(pricing.price / pricing.weight).toFixed(2)}/g
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Compliance Info */}
-                  {selectedProduct.compliance && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-gray-900 mb-2">Compliance Information</h4>
-                      <div className="text-sm text-gray-700 space-y-1">
-                        {selectedProduct.compliance.batchNumber && (
-                          <div><span className="font-medium">Batch Number:</span> {selectedProduct.compliance.batchNumber}</div>
-                        )}
-                        {selectedProduct.compliance.testDate && (
-                          <div><span className="font-medium">Test Date:</span> {new Date(selectedProduct.compliance.testDate).toLocaleDateString()}</div>
-                        )}
-                        {selectedProduct.compliance.labResults && (
-                          <div><span className="font-medium">Lab:</span> {selectedProduct.compliance.labResults}</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-
-              {/* Footer */}
-              <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-xl">
-                <div className="flex space-x-3">
-                  <button
-                    onClick={closeDetailModal}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Close
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      handleAddToCart(selectedProduct);
-                      closeDetailModal();
-                    }}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                  >
-                    Add to Cart
-                  </button>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">SKU:</span> {selectedProduct.sku}
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Stock:</span> {selectedProduct.stockQuantity || 0} {selectedProduct.unit || 'units'}
                 </div>
               </div>
             </div>
+
+            {/* ✅ Cannabinoids with THC/CBD mg */}
+            {(selectedProduct.thcContent > 0 || selectedProduct.cbdContent > 0) && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <Info className="h-4 w-4 mr-2" />
+                  Cannabinoid Profile
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedProduct.thcContent > 0 && (
+                    <div>
+                      <span className="block text-xs font-medium text-gray-500 uppercase mb-1">THC</span>
+                      <div className="text-lg font-bold text-green-600">{selectedProduct.thcContent}%</div>
+                      {selectedProduct.thcMg > 0 && (
+                        <div className="text-xs text-gray-600">{selectedProduct.thcMg}mg</div>
+                      )}
+                    </div>
+                  )}
+                  {selectedProduct.cbdContent > 0 && (
+                    <div>
+                      <span className="block text-xs font-medium text-gray-500 uppercase mb-1">CBD</span>
+                      <div className="text-lg font-bold text-blue-600">{selectedProduct.cbdContent}%</div>
+                      {selectedProduct.cbdMg > 0 && (
+                        <div className="text-xs text-gray-600">{selectedProduct.cbdMg}mg</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Effects */}
+            {selectedProduct.effects?.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Effects</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProduct.effects.map((effect, index) => (
+                    <span 
+                      key={index}
+                      className="px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800 capitalize"
+                    >
+                      {effect}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Flavors */}
+            {selectedProduct.flavors?.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Flavors</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProduct.flavors.map((flavor, index) => (
+                    <span 
+                      key={index}
+                      className="px-2 py-1 rounded-md text-xs font-medium bg-pink-100 text-pink-800 capitalize"
+                    >
+                      {flavor}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
+            {selectedProduct.description && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Description</h4>
+                <p className="text-gray-600 leading-relaxed">{selectedProduct.description}</p>
+              </div>
+            )}
+
+            {/* Pricing */}
+            {selectedProduct.pricing?.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Available Sizes & Pricing</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="space-y-2">
+                    {selectedProduct.pricing.map((pricing, index) => (
+                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                        <div>
+                          <span className="font-medium">{pricing.weight}g</span>
+                          {pricing.unit && (
+                            <span className="text-gray-500 text-sm ml-2">({pricing.unit})</span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-green-600">${pricing.price}</span>
+                          <div className="text-xs text-gray-500">
+                            ${(pricing.price / pricing.weight).toFixed(2)}/g
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Compliance Info */}
+            {selectedProduct.compliance && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Compliance Information</h4>
+                <div className="text-sm text-gray-700 space-y-2">
+                  {selectedProduct.compliance.batchNumber && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">Batch Number:</span>
+                      <span>{selectedProduct.compliance.batchNumber}</span>
+                    </div>
+                  )}
+                  {selectedProduct.compliance.labTested !== undefined && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">Lab Tested:</span>
+                      <span>{selectedProduct.compliance.labTested ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
+                  {selectedProduct.compliance.licensedProducer && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">Licensed Producer:</span>
+                      <span>{selectedProduct.compliance.licensedProducer}</span>
+                    </div>
+                  )}
+                  {selectedProduct.compliance.harvestDate && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">Harvest Date:</span>
+                      <span>{new Date(selectedProduct.compliance.harvestDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {selectedProduct.compliance.packagedDate && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">Packaged:</span>
+                      <span>{new Date(selectedProduct.compliance.packagedDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {selectedProduct.compliance.expirationDate && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">Expires:</span>
+                      <span>{new Date(selectedProduct.compliance.expirationDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {selectedProduct.compliance.stateTrackingId && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">State Tracking ID:</span>
+                      <span className="break-all">{selectedProduct.compliance.stateTrackingId}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Supplier Info */}
+            {selectedProduct.supplier?.name && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Supplier Information</h4>
+                <div className="text-sm text-gray-700 space-y-2">
+                  <div className="flex">
+                    <span className="font-medium text-gray-700 w-36">Name:</span>
+                    <span>{selectedProduct.supplier.name}</span>
+                  </div>
+                  {selectedProduct.supplier.contact && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">Contact:</span>
+                      <span>{selectedProduct.supplier.contact}</span>
+                    </div>
+                  )}
+                  {selectedProduct.supplier.license && (
+                    <div className="flex">
+                      <span className="font-medium text-gray-700 w-36">License:</span>
+                      <span>{selectedProduct.supplier.license}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-xl">
+          <div className="flex space-x-3">
+            <button
+              onClick={closeDetailModal}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                handleAddToCart(selectedProduct);
+                closeDetailModal();
+              }}
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
     </div>
   );
