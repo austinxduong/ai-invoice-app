@@ -1,8 +1,8 @@
 // frontend/src/components/POS/ProductCard.jsx
-// ✅ FIXED: Shows all effects, pricing dropdown, and uses NEW schema
+// ✅ FIXED: Shows ALL effects + Consistent card heights
 
 import React, { useState } from 'react';
-import { Package, Star } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
   const [selectedPricing, setSelectedPricing] = useState(product.pricing?.[0] || null);
@@ -35,9 +35,8 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
 
   const stockStatus = getStockStatus();
 
-  // ✅ Get all effects (not just first one!)
+  // ✅ Get all effects
   const effects = product.effects || [];
-  const firstEffect = effects[0] || '';
 
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden flex flex-col h-full">
@@ -95,84 +94,95 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
           </div>
         )}
 
-        {/* ✅ First Effect - Click to see all */}
-        {firstEffect && (
+        {/* ✅ FIX 1: Show ALL Effects (not just first one) */}
+        {effects.length > 0 && (
           <div className="mb-3">
-            <span className="text-xs text-gray-600 lowercase italic">{firstEffect}</span>
-            {effects.length > 1 && (
-              <span className="text-xs text-gray-400 ml-1">+{effects.length - 1} more</span>
-            )}
+            <div className="flex flex-wrap gap-1">
+              {effects.map((effect, index) => (
+                <span 
+                  key={index}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 lowercase italic"
+                >
+                  {effect}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* ✅ Pricing Selector - If multiple pricing options */}
-        {product.pricing && product.pricing.length > 1 ? (
-          <div className="mb-3">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
-            <select
-              value={selectedPricing ? `${selectedPricing.weight}-${selectedPricing.unit}` : ''}
-              onChange={(e) => {
-                const [weight, unit] = e.target.value.split('-');
-                const pricing = product.pricing.find(p => 
-                  p.weight === parseFloat(weight) && p.unit === unit
-                );
-                setSelectedPricing(pricing);
-              }}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-            >
-              {product.pricing.map((pricing, index) => (
-                <option 
-                  key={index} 
-                  value={`${pricing.weight}-${pricing.unit}`}
-                >
-                  {pricing.weight}g ({pricing.unit}) - ${pricing.price}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        {/* Price Display */}
-        <div className="mb-3">
-          {selectedPricing ? (
-            <>
-              <div className="text-2xl font-bold text-green-600">
-                ${selectedPricing.price}
-              </div>
-              <div className="text-xs text-gray-500">
-                per {selectedPricing.unit} • ${(selectedPricing.price / selectedPricing.weight).toFixed(2)}/g
-              </div>
-            </>
+        {/* ✅ FIX 2: Always show pricing section (with or without dropdown) */}
+        <div className="mt-auto">
+          {/* Pricing Selector - If multiple pricing options */}
+          {product.pricing && product.pricing.length > 1 ? (
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
+              <select
+                value={selectedPricing ? `${selectedPricing.weight}-${selectedPricing.unit}` : ''}
+                onChange={(e) => {
+                  const [weight, unit] = e.target.value.split('-');
+                  const pricing = product.pricing.find(p => 
+                    p.weight === parseFloat(weight) && p.unit === unit
+                  );
+                  setSelectedPricing(pricing);
+                }}
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+              >
+                {product.pricing.map((pricing, index) => (
+                  <option 
+                    key={index} 
+                    value={`${pricing.weight}-${pricing.unit}`}
+                  >
+                    {pricing.weight}g ({pricing.unit}) - ${pricing.price}
+                  </option>
+                ))}
+              </select>
+            </div>
           ) : (
-            <div className="text-2xl font-bold text-green-600">
-              ${product.pricing?.[0]?.price || 0}
+            // ✅ FIX: Add placeholder div to maintain consistent height
+            <div className="mb-3 h-[52px]">
+              {/* Empty space for alignment - same height as dropdown + label */}
             </div>
           )}
-        </div>
 
-        {/* Stock Info */}
-        <p className="text-sm text-gray-600 mb-4">
-          Stock: {stock} {stockUnit}
-        </p>
+          {/* Price Display */}
+          <div className="mb-3">
+            {selectedPricing ? (
+              <>
+                <div className="text-2xl font-bold text-green-600">
+                  ${selectedPricing.price}
+                </div>
+                <div className="text-xs text-gray-500">
+                  per {selectedPricing.unit} • ${(selectedPricing.price / selectedPricing.weight).toFixed(2)}/g
+                </div>
+              </>
+            ) : (
+              <div className="text-2xl font-bold text-green-600">
+                ${product.pricing?.[0]?.price || 0}
+              </div>
+            )}
+          </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => onAddToCart(product, selectedPricing)}
-            disabled={stock === 0}
-            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-          >
-            Add to Cart
-          </button>
-          <button
-            onClick={() => onViewDetails(product)}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-          >
-            Details
-          </button>
+          {/* Stock Info */}
+          <p className="text-sm text-gray-600 mb-4">
+            Stock: {stock} {stockUnit}
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => onAddToCart(product, selectedPricing)}
+              disabled={stock === 0}
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+            >
+              Add to Cart
+            </button>
+            <button
+              onClick={() => onViewDetails(product)}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              Details
+            </button>
+          </div>
         </div>
       </div>
     </div>

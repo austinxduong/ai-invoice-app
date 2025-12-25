@@ -34,21 +34,27 @@ const ProfilePage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   }
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    setIsUpdating(true);
+const handleUpdateProfile = async (e) => {
+  e.preventDefault();
+  setIsUpdating(true);
 
-    try {
-      const response = await axiosInstance.put(API_PATHS.AUTH.UPDATE_PROFILE, formData);
-      updateUser(response.data);
-      toast.success('Profile updated succesfully');
-    } catch (error) {
-      toast.error('Failed to update Profile');
-      console.error(error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  try {
+    const response = await axiosInstance.put(API_PATHS.AUTH.UPDATE_PROFILE, formData);
+    
+    // ✅ FIX: Pass response.data.user (not response.data)
+    updateUser(response.data.user);
+    
+    // ✅ ALSO UPDATE: localStorage directly (backup)
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+    
+    toast.success('Profile updated successfully');
+  } catch (error) {
+    toast.error('Failed to update Profile');
+    console.error(error);
+  } finally {
+    setIsUpdating(false);
+  }
+};
 
   if (loading) {
     return <div className="flex justify-center items-center"><Loader2 className="w-8 h-8 animate-spin" /></div>
