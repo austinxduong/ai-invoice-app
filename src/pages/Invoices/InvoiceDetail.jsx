@@ -117,17 +117,38 @@ const InvoiceDetail = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 my-8">
             <div>
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Bill From</h3>
-              <p className="font-semibold text-slate-800">{invoice.billFrom.businessName}</p>
-              <p className="text-slate-600">{invoice.billFrom.address}</p>
-              <p className="text-slate-600">{invoice.billFrom.email}</p>
-              <p className="text-slate-600">{invoice.billFrom.phone}</p>
+              {/* ✅ FIX: Safe access to billFrom fields */}
+              {invoice.billFrom?.businessName && (
+                <p className="font-semibold text-slate-800">{invoice.billFrom.businessName}</p>
+              )}
+              {invoice.billFrom?.name && (
+                <p className="font-semibold text-slate-800">{invoice.billFrom.name}</p>
+              )}
+              {invoice.billFrom?.address && (
+                <p className="text-slate-600">{invoice.billFrom.address}</p>
+              )}
+              {invoice.billFrom?.email && (
+                <p className="text-slate-600">{invoice.billFrom.email}</p>
+              )}
+              {invoice.billFrom?.phone && (
+                <p className="text-slate-600">{invoice.billFrom.phone}</p>
+              )}
             </div>
             <div className="sm:text-right">
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Bill To</h3>
-              <p className="font-semibold text-slate-800">{invoice.billTo.clientName}</p>
-              <p className="text-slate-600">{invoice.billTo.address}</p>
-              <p className="text-slate-600">{invoice.billTo.email}</p>
-              <p className="text-slate-600">{invoice.billTo.phone}</p>
+              {/* ✅ FIX: Safe access to billTo fields */}
+              {invoice.billTo?.clientName && (
+                <p className="font-semibold text-slate-800">{invoice.billTo.clientName}</p>
+              )}
+              {invoice.billTo?.address && (
+                <p className="text-slate-600">{invoice.billTo.address}</p>
+              )}
+              {invoice.billTo?.email && (
+                <p className="text-slate-600">{invoice.billTo.email}</p>
+              )}
+              {invoice.billTo?.phone && (
+                <p className="text-slate-600">{invoice.billTo.phone}</p>
+              )}
             </div>
           </div>
 
@@ -157,14 +178,19 @@ const InvoiceDetail = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {invoice.items.map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-4 sm:px-6 py-4 text-sm font-medium text-slate-900">{item.name}</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-sm font-medium text-slate-600">{item.quantity}</td>
-                    <td className="px-4 sm:px-6 py-4 text-right text-sm font-medium text-slate-600">${item.unitPrice.toFixed(2)}</td>
-                    <td className="px-4 sm:px-6 py-4 text-right text-sm font-medium text-slate-900">${item.total.toFixed(2)}</td>
-                  </tr>
-                ))}
+                {invoice.items.map((item, index) => {
+                  // ✅ Calculate total (since it's not in the data)
+                  const itemTotal = item.total || (item.quantity * item.unitPrice);
+                  
+                  return (
+                    <tr key={index}>
+                      <td className="px-4 sm:px-6 py-4 text-sm font-medium text-slate-900">{item.name}</td>
+                      <td className="px-4 sm:px-6 py-4 text-center text-sm font-medium text-slate-600">{item.quantity}</td>
+                      <td className="px-4 sm:px-6 py-4 text-right text-sm font-medium text-slate-600">${item.unitPrice.toFixed(2)}</td>
+                      <td className="px-4 sm:px-6 py-4 text-right text-sm font-medium text-slate-900">${itemTotal.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
