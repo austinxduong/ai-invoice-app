@@ -5,7 +5,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import axiosInstance from '../../utils/axiosInstance';
 
 // Replace with your actual Stripe publishable key
-const stripePromise = loadStripe('pk_test_YOUR_STRIPE_PUBLISHABLE_KEY_HERE');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // Card element styling
 const CARD_ELEMENT_OPTIONS = {
@@ -101,7 +101,7 @@ const PaymentFormContent = ({ demoData }) => {
     try {
       // Step 1: Create payment intent on your backend
       console.log('💳 Creating payment intent...');
-      const { data: intentData } = await axiosInstance.post('/api/payment/create-payment-intent', {
+      const { data: intentData } = await axiosInstance.post('/payment/create-payment-intent', {
         amount: 29900, // $299.00 in cents
         currency: 'usd',
         demoId: demoData.demoId,
@@ -138,7 +138,7 @@ const PaymentFormContent = ({ demoData }) => {
       // Step 3: Payment successful, create account
       if (paymentIntent.status === 'succeeded') {
         console.log('🎉 Creating user account...');
-        const { data: accountData } = await axiosInstance.post('/api/payment/create-account', {
+        const { data: accountData } = await axiosInstance.post('/payment/create-account', {
           email: paymentData.billingEmail,
           firstName: demoData.firstName,
           lastName: demoData.lastName,
@@ -429,7 +429,7 @@ const PaymentFromLink = () => {
     const validateToken = async () => {
       try {
         console.log('🔍 Validating token:', token);
-        const response = await axiosInstance.get(`/api/payment/validate/${token}`);
+        const response = await axiosInstance.get(`/payment/validate/${token}`);
         console.log('✅ Token validated:', response.data);
         setDemoData(response.data);
       } catch (error) {
