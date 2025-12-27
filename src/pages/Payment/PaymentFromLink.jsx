@@ -6,6 +6,10 @@ import axiosInstance from '../../utils/axiosInstance';
 
 // Replace with your actual Stripe publishable key
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+console.log('🔑 Stripe Key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+stripePromise.then(stripe => {
+  console.log('✅ Stripe loaded:', stripe ? 'Success' : 'Failed');
+});
 
 // Card element styling
 const CARD_ELEMENT_OPTIONS = {
