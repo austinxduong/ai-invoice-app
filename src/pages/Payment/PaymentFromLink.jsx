@@ -3,13 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import axiosInstance from '../../utils/axiosInstance';
+import { Users, Minus, Plus } from 'lucide-react';
 
-// Replace with your actual Stripe publishable key
+// ✅ Use Stripe publishable key from environment variable
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-console.log('🔑 Stripe Key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-stripePromise.then(stripe => {
-  console.log('✅ Stripe loaded:', stripe ? 'Success' : 'Failed');
-});
 
 // Card element styling
 const CARD_ELEMENT_OPTIONS = {
@@ -31,7 +28,22 @@ const CARD_ELEMENT_OPTIONS = {
   hidePostalCode: false,
 };
 
-// Inner payment form component (uses Stripe Elements)
+// ✅ Number flip animation component
+const AnimatedNumber = ({ value }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  
+  useEffect(() => {
+    setDisplayValue(value);
+  }, [value]);
+  
+  return (
+    <span className="inline-block transition-all duration-300 ease-out">
+      ${displayValue.toLocaleString()}
+    </span>
+  );
+};
+
+// Inner payment form component
 const PaymentFormContent = ({ demoData }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -42,27 +54,64 @@ const PaymentFormContent = ({ demoData }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   
+  // ✅ License quantity state
+  const [licenseQuantity, setLicenseQuantity] = useState(1);
+  const PRICE_PER_LICENSE = 299;
+  const monthlyTotal = licenseQuantity * PRICE_PER_LICENSE;
+  
+  // ✅ Separate billing and account emails
   const [paymentData, setPaymentData] = useState({
-    nameOnCard: `${demoData.firstName} ${demoData.lastName}`,
+    // Billing information
     billingEmail: demoData.email,
     billingEmailConfirm: demoData.email,
+    
+    // Account/Login information
+    accountEmail: demoData.email,
+    accountEmailConfirm: demoData.email,
+    
+    // Account credentials
     password: '',
-    passwordConfirm: ''
+    passwordConfirm: '',
+    
+    // Payment info
+    nameOnCard: `${demoData.firstName} ${demoData.lastName}`,
   });
   
   const [paymentErrors, setPaymentErrors] = useState({});
 
+  // ✅ License quantity handlers
+  const incrementLicenses = () => {
+    if (licenseQuantity < 100) {
+      setLicenseQuantity(prev => prev + 1);
+    }
+  };
+  
+  const decrementLicenses = () => {
+    if (licenseQuantity > 1) {
+      setLicenseQuantity(prev => prev - 1);
+    }
+  };
+
   const validatePaymentForm = () => {
     const errors = {};
-    
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    // ✅ Billing Email validation
     if (!paymentData.billingEmail || !emailRegex.test(paymentData.billingEmail)) {
-      errors.billingEmail = 'Please enter a valid email address';
+      errors.billingEmail = 'Please enter a valid billing email';
     }
     
     if (paymentData.billingEmail !== paymentData.billingEmailConfirm) {
-      errors.billingEmailConfirm = 'Email addresses do not match';
+      errors.billingEmailConfirm = 'Billing emails do not match';
+    }
+    
+    // ✅ Account Email validation
+    if (!paymentData.accountEmail || !emailRegex.test(paymentData.accountEmail)) {
+      errors.accountEmail = 'Please enter a valid account email';
+    }
+    
+    if (paymentData.accountEmail !== paymentData.accountEmailConfirm) {
+      errors.accountEmailConfirm = 'Account emails do not match';
     }
     
     // Password validation
@@ -71,7 +120,7 @@ const PaymentFormContent = ({ demoData }) => {
     } else if (paymentData.password.length < 8) {
       errors.password = 'Password must be at least 8 characters long';
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(paymentData.password)) {
-      errors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+      errors.password = 'Password must contain uppercase, lowercase, and number';
     }
     
     if (paymentData.password !== paymentData.passwordConfirm) {
@@ -103,13 +152,14 @@ const PaymentFormContent = ({ demoData }) => {
     setPaymentStep('processing');
     
     try {
-      // Step 1: Create payment intent on your backend
+      // Step 1: Create payment intent
       console.log('💳 Creating payment intent...');
       const { data: intentData } = await axiosInstance.post('/payment/create-payment-intent', {
-        amount: 29900, // $299.00 in cents
+        amount: monthlyTotal * 100, // Convert to cents
         currency: 'usd',
         demoId: demoData.demoId,
-        email: paymentData.billingEmail,
+        billingEmail: paymentData.billingEmail,
+        licenseQuantity: licenseQuantity,
       });
 
       if (!intentData.clientSecret) {
@@ -139,33 +189,59 @@ const PaymentFormContent = ({ demoData }) => {
 
       console.log('✅ Payment confirmed:', paymentIntent.id);
 
-      // Step 3: Payment successful, create account
+      // Step 3: Create account with organization
       if (paymentIntent.status === 'succeeded') {
-        console.log('🎉 Creating user account...');
+        console.log('🎉 Creating organization & account...');
         const { data: accountData } = await axiosInstance.post('/payment/create-account', {
-          email: paymentData.billingEmail,
+          // Organization details
+          companyName: demoData.companyName,
+          licenseQuantity: licenseQuantity,
+          monthlyAmount: monthlyTotal,
+          
+          // Owner account details
+          accountEmail: paymentData.accountEmail,
+          password: paymentData.password,
           firstName: demoData.firstName,
           lastName: demoData.lastName,
-          company: demoData.companyName,
-          password: paymentData.password,
+          
+          // Billing details
+          billingEmail: paymentData.billingEmail,
+          
+          // Payment details
           paymentLinkId: demoData.demoId,
           paymentIntentId: paymentIntent.id,
-          paymentData: {
-            cardLast4: paymentIntent.charges?.data[0]?.payment_method_details?.card?.last4 || 'xxxx',
-            paymentAmount: 299,
-            currency: 'USD',
-            paymentMethod: 'card',
-            stripeCustomerId: intentData.customerId,
-          }
+          stripeCustomerId: intentData.customerId,
+          cardLast4: paymentIntent.charges?.data[0]?.payment_method_details?.card?.last4 || 'xxxx',
         });
 
         if (accountData.success) {
           setPaymentStep('success');
           
+          // Store organization code for display
+          const orgCode = accountData.organizationId;
+          
           setTimeout(() => {
-            alert(`🎉 Payment Successful & Account Created!\n\nYour login credentials:\nEmail: ${paymentData.billingEmail}\nPassword: [The password you created]\n\nYou can now login to access your cannabis ERP platform!`);
+            alert(`🎉 Payment Successful & Account Created!
+
+Organization: ${demoData.companyName}
+Organization ID: ${orgCode}
+Licenses: ${licenseQuantity} user${licenseQuantity > 1 ? 's' : ''}
+Monthly Cost: $${monthlyTotal}
+
+Your Login Credentials:
+Email: ${paymentData.accountEmail}
+Password: [The password you created]
+
+Billing receipts will be sent to: ${paymentData.billingEmail}
+
+Next Steps:
+1. Login to your account
+2. Complete your company profile
+3. Invite your team members!
+
+You can now login to access your platform!`);
             navigate('/login?account=created');
-          }, 1500);
+          }, 2000);
         } else {
           throw new Error(accountData.error || 'Account creation failed');
         }
@@ -185,15 +261,15 @@ const PaymentFormContent = ({ demoData }) => {
   if (paymentStep === 'success') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-green-50">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-green-800 mb-4">Payment Successful!</h2>
-          <p className="text-green-700 mb-2">Your account has been created successfully!</p>
-          <p className="text-sm text-green-600 mb-4">You can now login with the credentials you created</p>
+          <p className="text-green-700 mb-2">Your organization has been created!</p>
+          <p className="text-sm text-green-600 mb-4">Check your email for login details and next steps</p>
           <div className="animate-pulse text-sm text-green-600">Redirecting to login...</div>
         </div>
       </div>
@@ -202,7 +278,7 @@ const PaymentFormContent = ({ demoData }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-2xl mx-auto px-4">
         {/* Welcome Back Section */}
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
           <div className="text-center">
@@ -224,19 +300,73 @@ const PaymentFormContent = ({ demoData }) => {
             Complete Payment & Create Account
           </h1>
 
-          {/* Subscription Details */}
-          <div className="text-center mb-8">
-            <div className="text-3xl font-bold text-green-600">$299</div>
-            <div className="text-gray-600">per month</div>
-            <div className="text-sm text-gray-500 mt-1">Cancel anytime • 30-day money-back guarantee</div>
+          {/* ✅ License Quantity Selector */}
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 mb-8">
+            <div className="text-center mb-4">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Select User Licenses</h3>
+              </div>
+              <p className="text-sm text-gray-600">
+                ${PRICE_PER_LICENSE} per user/month • Cancel anytime
+              </p>
+            </div>
+
+            {/* License Counter */}
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <button
+                type="button"
+                onClick={decrementLicenses}
+                disabled={licenseQuantity <= 1}
+                className="w-12 h-12 rounded-full bg-white border-2 border-green-600 text-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              >
+                <Minus className="w-5 h-5" />
+              </button>
+              
+              <div className="text-center min-w-[120px]">
+                <div className="text-4xl font-bold text-green-600">{licenseQuantity}</div>
+                <div className="text-sm text-gray-600">
+                  {licenseQuantity === 1 ? 'user' : 'users'}
+                </div>
+              </div>
+              
+              <button
+                type="button"
+                onClick={incrementLicenses}
+                disabled={licenseQuantity >= 100}
+                className="w-12 h-12 rounded-full bg-white border-2 border-green-600 text-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Monthly Total with Animation */}
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">
+                <AnimatedNumber value={monthlyTotal} />
+                <span className="text-lg">/month</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                30-day money-back guarantee
+              </div>
+            </div>
+
+            {/* Team Member Info */}
+            {licenseQuantity > 1 && (
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>After payment:</strong> You'll be able to invite {licenseQuantity - 1} team member{licenseQuantity > 2 ? 's' : ''} from your dashboard. They'll set their own passwords!
+                </p>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handlePaymentSubmit} className="space-y-6">
-            {/* Account Information Section */}
+            {/* ✅ Billing Information Section */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Account Information</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">📧 Billing Information</h3>
+              <p className="text-sm text-gray-600 mb-4">Invoices and receipts will be sent here</p>
               
-              {/* Billing Email */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -244,7 +374,7 @@ const PaymentFormContent = ({ demoData }) => {
                   </label>
                   <input
                     type="email"
-                    placeholder="your-email@company.com"
+                    placeholder="billing@company.com"
                     value={paymentData.billingEmail}
                     onChange={(e) => setPaymentData({...paymentData, billingEmail: e.target.value})}
                     className={`w-full p-3 border rounded-lg ${paymentErrors.billingEmail ? 'border-red-500' : 'border-gray-300'}`}
@@ -256,11 +386,11 @@ const PaymentFormContent = ({ demoData }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Email *
+                    Confirm Billing Email *
                   </label>
                   <input
                     type="email"
-                    placeholder="Confirm your email"
+                    placeholder="Confirm billing email"
                     value={paymentData.billingEmailConfirm}
                     onChange={(e) => setPaymentData({...paymentData, billingEmailConfirm: e.target.value})}
                     className={`w-full p-3 border rounded-lg ${paymentErrors.billingEmailConfirm ? 'border-red-500' : 'border-gray-300'}`}
@@ -270,9 +400,49 @@ const PaymentFormContent = ({ demoData }) => {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* ✅ Account/Login Information Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">🔐 Account Login Information</h3>
+              <p className="text-sm text-gray-600 mb-4">You'll use this email to login to your account</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Account Email *
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="your-email@company.com"
+                    value={paymentData.accountEmail}
+                    onChange={(e) => setPaymentData({...paymentData, accountEmail: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.accountEmail ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {paymentErrors.accountEmail && (
+                    <p className="text-red-500 text-sm mt-1">{paymentErrors.accountEmail}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Account Email *
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="Confirm account email"
+                    value={paymentData.accountEmailConfirm}
+                    onChange={(e) => setPaymentData({...paymentData, accountEmailConfirm: e.target.value})}
+                    className={`w-full p-3 border rounded-lg ${paymentErrors.accountEmailConfirm ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {paymentErrors.accountEmailConfirm && (
+                    <p className="text-red-500 text-sm mt-1">{paymentErrors.accountEmailConfirm}</p>
+                  )}
+                </div>
+              </div>
 
               {/* Password Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Create Password *
@@ -288,22 +458,9 @@ const PaymentFormContent = ({ demoData }) => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     >
-                      {showPassword ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
-                          <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
-                          <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
-                          <line x1="2" x2="22" y1="2" y2="22"></line>
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
+                      {showPassword ? '🙈' : '👁️'}
                     </button>
                   </div>
                   {paymentErrors.password && (
@@ -329,22 +486,9 @@ const PaymentFormContent = ({ demoData }) => {
                     <button
                       type="button"
                       onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                      aria-label={showPasswordConfirm ? "Hide password" : "Show password"}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     >
-                      {showPasswordConfirm ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
-                          <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
-                          <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
-                          <line x1="2" x2="22" y1="2" y2="22"></line>
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
+                      {showPasswordConfirm ? '🙈' : '👁️'}
                     </button>
                   </div>
                   {paymentErrors.passwordConfirm && (
@@ -356,7 +500,7 @@ const PaymentFormContent = ({ demoData }) => {
 
             {/* Payment Information Section */}
             <div className="border-t pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Information</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">💳 Payment Information</h3>
 
               {/* Name on Card */}
               <div className="mb-4">
@@ -396,7 +540,7 @@ const PaymentFormContent = ({ demoData }) => {
               </div>
             )}
 
-            {/* Submit Button */}
+            {/* Submit Button with Dynamic Total */}
             <button
               type="submit"
               disabled={!stripe || paymentLoading || paymentStep === 'processing'}
@@ -408,7 +552,7 @@ const PaymentFormContent = ({ demoData }) => {
                   <span>Processing Payment...</span>
                 </div>
               ) : (
-                `💳 Pay $299/month & Create Account`
+                `💳 Pay $${monthlyTotal.toLocaleString()}/month & Create Account`
               )}
             </button>
           </form>
