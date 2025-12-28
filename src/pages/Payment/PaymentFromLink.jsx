@@ -136,92 +136,104 @@ const PaymentFormContent = ({ demoData }) => {
     return Object.keys(errors).length === 0;
   };
 
-  const handlePaymentSubmit = async (e) => {
-    e.preventDefault();
+const handlePaymentSubmit = async (e) => {
+  e.preventDefault();
+  
+  // Prevent double submission
+  if (paymentLoading || paymentStep === 'processing') {
+    return;
+  }
+  
+  if (!validatePaymentForm()) {
+    return;
+  }
+
+  if (!stripe || !elements) {
+    setPaymentErrors({ general: 'Stripe is not loaded yet. Please wait a moment and try again.' });
+    return;
+  }
+  
+  setPaymentLoading(true);
+  setPaymentStep('processing');
+  
+  try {
+    // ✅ STEP 0: Check if email already exists BEFORE charging
+    console.log('🔍 Checking if account email already exists...');
+    try {
+      await axiosInstance.post('/payment/check-email', {
+        accountEmail: paymentData.accountEmail
+      });
+      console.log('✅ Email is available');
+    } catch (emailCheckError) {
+      // Email already exists!
+      throw new Error(emailCheckError.response?.data?.error || 'Email is already registered');
+    }
     
-    if (!validatePaymentForm()) {
-      return;
+    // ✅ STEP 1: Create payment intent
+    console.log('💳 Creating payment intent...');
+    const idempotencyKey = `${demoData.demoId}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    
+    const { data: intentData } = await axiosInstance.post('/payment/create-payment-intent', {
+      amount: monthlyTotal * 100,
+      currency: 'usd',
+      demoId: demoData.demoId,
+      billingEmail: paymentData.billingEmail,
+      licenseQuantity: licenseQuantity,
+      idempotencyKey: idempotencyKey,
+    });
+
+    if (!intentData.clientSecret) {
+      throw new Error('Failed to create payment intent');
     }
 
-    if (!stripe || !elements) {
-      setPaymentErrors({ general: 'Stripe is not loaded yet. Please wait a moment and try again.' });
-      return;
+    console.log('✅ Payment intent created');
+
+    // ✅ STEP 2: Confirm payment with Stripe
+    console.log('💳 Confirming payment with Stripe...');
+    const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+      intentData.clientSecret,
+      {
+        payment_method: {
+          card: elements.getElement(CardElement),
+          billing_details: {
+            name: paymentData.nameOnCard,
+            email: paymentData.billingEmail,
+          },
+        },
+      }
+    );
+
+    if (stripeError) {
+      throw new Error(stripeError.message);
     }
-    
-    setPaymentLoading(true);
-    setPaymentStep('processing');
-    
-    try {
-      // Step 1: Create payment intent
-      console.log('💳 Creating payment intent...');
-      const { data: intentData } = await axiosInstance.post('/payment/create-payment-intent', {
-        amount: monthlyTotal * 100, // Convert to cents
-        currency: 'usd',
-        demoId: demoData.demoId,
-        billingEmail: paymentData.billingEmail,
+
+    console.log('✅ Payment confirmed:', paymentIntent.id);
+
+    // ✅ STEP 3: Create account
+    if (paymentIntent.status === 'succeeded') {
+      console.log('🎉 Creating organization & account...');
+      const { data: accountData } = await axiosInstance.post('/payment/create-account', {
+        companyName: demoData.companyName,
         licenseQuantity: licenseQuantity,
+        monthlyAmount: monthlyTotal,
+        accountEmail: paymentData.accountEmail,
+        password: paymentData.password,
+        firstName: demoData.firstName,
+        lastName: demoData.lastName,
+        billingEmail: paymentData.billingEmail,
+        paymentLinkId: demoData.demoId,
+        paymentIntentId: paymentIntent.id,
+        stripeCustomerId: intentData.customerId,
+        cardLast4: paymentIntent.charges?.data[0]?.payment_method_details?.card?.last4 || 'xxxx',
       });
 
-      if (!intentData.clientSecret) {
-        throw new Error('Failed to create payment intent');
-      }
-
-      console.log('✅ Payment intent created');
-
-      // Step 2: Confirm payment with Stripe
-      console.log('💳 Confirming payment with Stripe...');
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
-        intentData.clientSecret,
-        {
-          payment_method: {
-            card: elements.getElement(CardElement),
-            billing_details: {
-              name: paymentData.nameOnCard,
-              email: paymentData.billingEmail,
-            },
-          },
-        }
-      );
-
-      if (stripeError) {
-        throw new Error(stripeError.message);
-      }
-
-      console.log('✅ Payment confirmed:', paymentIntent.id);
-
-      // Step 3: Create account with organization
-      if (paymentIntent.status === 'succeeded') {
-        console.log('🎉 Creating organization & account...');
-        const { data: accountData } = await axiosInstance.post('/payment/create-account', {
-          // Organization details
-          companyName: demoData.companyName,
-          licenseQuantity: licenseQuantity,
-          monthlyAmount: monthlyTotal,
-          
-          // Owner account details
-          accountEmail: paymentData.accountEmail,
-          password: paymentData.password,
-          firstName: demoData.firstName,
-          lastName: demoData.lastName,
-          
-          // Billing details
-          billingEmail: paymentData.billingEmail,
-          
-          // Payment details
-          paymentLinkId: demoData.demoId,
-          paymentIntentId: paymentIntent.id,
-          stripeCustomerId: intentData.customerId,
-          cardLast4: paymentIntent.charges?.data[0]?.payment_method_details?.card?.last4 || 'xxxx',
-        });
-
-        if (accountData.success) {
-          setPaymentStep('success');
-          
-          // Store organization code for display
-          const orgCode = accountData.organizationId;
-          
-          setTimeout(() => {
-            alert(`🎉 Payment Successful & Account Created!
+      if (accountData.success) {
+        setPaymentStep('success');
+        
+        const orgCode = accountData.organizationId;
+        
+        setTimeout(() => {
+          alert(`🎉 Payment Successful & Account Created!
 
 Organization: ${demoData.companyName}
 Organization ID: ${orgCode}
@@ -240,23 +252,23 @@ Next Steps:
 3. Invite your team members!
 
 You can now login to access your platform!`);
-            navigate('/login?account=created');
-          }, 2000);
-        } else {
-          throw new Error(accountData.error || 'Account creation failed');
-        }
+          navigate('/login?account=created');
+        }, 2000);
+      } else {
+        throw new Error(accountData.error || 'Account creation failed');
       }
-      
-    } catch (error) {
-      console.error('❌ Payment failed:', error);
-      setPaymentStep('form');
-      setPaymentErrors({ 
-        general: error.response?.data?.error || error.message || 'Payment failed. Please try again.' 
-      });
-    } finally {
-      setPaymentLoading(false);
     }
-  };
+    
+  } catch (error) {
+    console.error('❌ Payment failed:', error);
+    setPaymentStep('form');
+    setPaymentErrors({ 
+      general: error.response?.data?.error || error.message || 'Payment failed. Please try again.' 
+    });
+  } finally {
+    setPaymentLoading(false);
+  }
+};
 
   if (paymentStep === 'success') {
     return (
