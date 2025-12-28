@@ -27,7 +27,8 @@ import CreateProduct from "./pages/Products/CreateProduct";
 import DemoBooking from "./pages/Demo/DemoBooking";
 import PaymentFromLink from "./pages/Payment/PaymentFromLink";
 import Settings from "./pages/Settings/Settings";
-
+import TeamManagement from "./pages/TeamManagement";
+import AcceptInvite from "./pages/AccepInvite";
 
 const App = () => {
   console.log('🚨 APP COMPONENT LOADING');
@@ -96,7 +97,7 @@ const App = () => {
 
           <Route path="/reports" element={
             <ProtectedRoute>
-                  <ReportsDashboard />
+              <ReportsDashboard />
             </ProtectedRoute>
           } />
 
@@ -118,6 +119,18 @@ const App = () => {
               <Settings />
             </ProtectedRoute>
           } />
+
+          <Route path="/team" element={
+            <ProtectedRoute>
+                <TeamManagement />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/accept-invite/:token" element={
+            <AcceptInvite />
+          } />
+          
+
           
 
           </Routes>
