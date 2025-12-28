@@ -1,4 +1,6 @@
 // frontend/src/pages/TeamManagement.jsx
+// ✅ UPDATED: Buttons show as disabled with tooltips instead of hidden
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../utils/axiosInstance';
@@ -12,6 +14,12 @@ const TeamManagement = () => {
   const [isInviting, setIsInviting] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   
+  // ✅ Debug: Log user permissions
+  useEffect(() => {
+    console.log('👤 Current user:', user);
+    console.log('🔐 Permissions:', user?.permissions);
+  }, [user]);
+  
   const [inviteForm, setInviteForm] = useState({
     email: '',
     firstName: '',
@@ -19,7 +27,6 @@ const TeamManagement = () => {
     role: 'user'
   });
 
-  // Fetch team members
   useEffect(() => {
     fetchTeamMembers();
   }, []);
@@ -45,7 +52,6 @@ const TeamManagement = () => {
       
       toast.success(`Invitation sent to ${inviteForm.email}!`);
       
-      // Reset form
       setInviteForm({
         email: '',
         firstName: '',
@@ -54,8 +60,6 @@ const TeamManagement = () => {
       });
       
       setShowInviteModal(false);
-      
-      // Refresh team members
       fetchTeamMembers();
       
     } catch (error) {
@@ -128,6 +132,9 @@ const TeamManagement = () => {
   const pendingMembers = teamMembers.filter(m => !m.isActive).length;
   const maxUsers = user?.organization?.maxUsers || 5;
   const availableSeats = maxUsers - activeMembers;
+  
+  // ✅ Check if user can manage team
+  const canManageUsers = user?.permissions?.canManageUsers || user?.isOwner || false;
 
   if (loading) {
     return (
@@ -205,16 +212,34 @@ const TeamManagement = () => {
               ></div>
             </div>
           </div>
-          {availableSeats > 0 && (
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              Invite Team Member
-            </button>
-          )}
-          {availableSeats === 0 && (
+          
+          {/* ✅ UPDATED: Show button but disable if no permission */}
+          {availableSeats > 0 ? (
+            <div className="relative group">
+              <button
+                onClick={() => canManageUsers && setShowInviteModal(true)}
+                disabled={!canManageUsers}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  canManageUsers
+                    ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer shadow-sm hover:shadow'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" />
+                Invite Team Member
+              </button>
+              {!canManageUsers && (
+                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg">
+                    Only owners and admins can invite team members
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                      <div className="border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
             <div className="text-sm text-orange-600 font-medium">
               No available seats. Upgrade your plan to add more users.
             </div>
@@ -291,17 +316,36 @@ const TeamManagement = () => {
                       {getStatusBadge(member.isActive)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {!member.isOwner && member._id !== user?.id && (
-                        <button
-                          onClick={() => handleRemoveMember(member._id, `${member.firstName} ${member.lastName}`)}
-                          className="inline-flex items-center gap-1 text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remove
-                        </button>
-                      )}
-                      {member.isOwner && (
+                      {/* ✅ UPDATED: Show disabled remove button with tooltip */}
+                      {!member.isOwner && member._id !== user?.id ? (
+                        <div className="relative group inline-block">
+                          <button
+                            onClick={() => canManageUsers && handleRemoveMember(member._id, `${member.firstName} ${member.lastName}`)}
+                            disabled={!canManageUsers}
+                            className={`inline-flex items-center gap-1 px-3 py-1 rounded transition-all ${
+                              canManageUsers
+                                ? 'text-red-600 hover:text-red-900 hover:bg-red-50 cursor-pointer'
+                                : 'text-gray-400 cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remove
+                          </button>
+                          {!canManageUsers && (
+                            <div className="absolute bottom-full mb-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                              <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg">
+                                Only owners and admins can remove members
+                                <div className="absolute top-full right-4 transform -mt-1">
+                                  <div className="border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : member.isOwner ? (
                         <span className="text-gray-400 text-xs">Owner</span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">You</span>
                       )}
                     </td>
                   </tr>
