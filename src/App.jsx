@@ -29,6 +29,10 @@ import PaymentFromLink from "./pages/Payment/PaymentFromLink";
 import Settings from "./pages/Settings/Settings";
 import TeamManagement from "./pages/TeamManagement";
 import AcceptInvite from "./pages/AccepInvite";
+import RMADashboard from "./pages/RMADashboard";
+import CreateRMA from "./pages/CreateRma";
+import RMADetail from "./pages/RMADetail";
+import EditRMA from "./pages/EditRMA";
 
 const App = () => {
   console.log('🚨 APP COMPONENT LOADING');
@@ -129,10 +133,33 @@ const App = () => {
           <Route path="/accept-invite/:token" element={
             <AcceptInvite />
           } />
+
+          <Route path="/rma" element={
+            <ProtectedRoute>
+              <RMADashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/rma/create" element={
+            <ProtectedRoute>
+              <CreateRMA />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/rma/:id" element={
+            <ProtectedRoute>
+              <RMADetail />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/rma/edit/:id" element={
+            <ProtectedRoute>
+              <EditRMA />
+            </ProtectedRoute>
+          } />
           
 
-          
-
+      
           </Routes>
 
               <CartModal />

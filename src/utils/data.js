@@ -1,4 +1,4 @@
-import { BarChart2, FileText, LayoutDashboard, Mail, Sparkles, Plus, Users, Leaf, Calculator, Activity, UserCog} from "lucide-react"
+import { BarChart2, FileText, LayoutDashboard, Mail, Sparkles, Plus, Users, Leaf, Calculator, Activity, UserCog, Undo2} from "lucide-react"
 
 export const FEATURES = [
   {
@@ -59,6 +59,7 @@ export const NAVIGATION_MENU = [
  { id: "invoices", name: "Invoices", icon: FileText },
  { id: "invoices/new", name: "Create Invoice", icon: Plus },
  { id: "products", name:"Product Catalog", icon: Leaf},
+ { id: "rma", name: "RMA Returns", icon: Undo2 },
  { id: "pos", name: "Point of Sale", icon: Calculator},
  { id: "profile", name: "Profile", icon: Users },
  { id: "team", name: "Team Management", icon: UserCog},
