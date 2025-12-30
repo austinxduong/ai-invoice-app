@@ -71,23 +71,66 @@ const CreateRMA = () => {
     }
   };
 
-  const handleSelectInvoice = (invoice) => {
+  const handleSelectInvoice = async (invoice) => {
     setSelectedInvoice(invoice);
-    // Pre-populate products from invoice
-    const products = invoice.items.map(item => ({
-      productId: item.productId,
-      productName: item.name || item.description,
-      sku: item.sku || '',
-      batchNumber: item.batchNumber || '',
-      availableQuantity: item.quantity,
-      quantity: 0,
-      unitPrice: item.unitPrice || item.price,
-      totalValue: 0,
-      reason: '',
-      condition: 'defective'
-    }));
-    setSelectedProducts(products);
-    setStep(2);
+    setLoading(true);
+    
+    try {
+      // ✅ Fetch product details for each item to get SKU
+      const productsWithDetails = await Promise.all(
+        invoice.items.map(async (item) => {
+          let sku = item.sku || item.SKU || item.productSku || item.code || '';
+          let batchNumber = item.batchNumber || item.batch || '';
+          let productId = item.productId || item._id;
+          
+          // If no SKU in invoice item, try to fetch from product catalog
+          if (!sku) {
+            try {
+              // ✅ Search by product name since invoice doesn't store product ID
+              const productName = (item.name || item.description || '').replace(/\s*\([^)]*\)/g, '').trim(); // Remove "(7g)" etc
+              console.log('🔍 Searching for product:', productName);
+              
+              const searchResponse = await axiosInstance.get(`/products?search=${encodeURIComponent(productName)}&limit=1`);
+              
+              if (searchResponse.data.products && searchResponse.data.products.length > 0) {
+                const product = searchResponse.data.products[0];
+                console.log('✅ Found product:', product);
+                
+                sku = product.sku || product.SKU || product.productCode || product.code || '';
+                batchNumber = batchNumber || product.compliance?.batchNumber || product.batchNumber || '';
+                productId = product._id;
+              } else {
+                console.warn('⚠️ No product found for:', productName);
+              }
+            } catch (error) {
+              console.warn('⚠️ Could not fetch product details for:', item.name, error);
+            }
+          }
+          
+          return {
+            productId: productId,
+            productName: item.name || item.description || item.productName,
+            sku: sku,
+            batchNumber: batchNumber,
+            availableQuantity: item.quantity || item.qty || 0,
+            quantity: 0,
+            unitPrice: item.unitPrice || item.price || 0,
+            totalValue: 0,
+            reason: '',
+            condition: 'defective'
+          };
+        })
+      );
+      
+      console.log('✅ Products with SKUs:', productsWithDetails);
+      setSelectedProducts(productsWithDetails);
+      setStep(2);
+    } catch (error) {
+      console.error('❌ Error processing invoice items:', error);
+      toast.error('Failed to load product details');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateProductQuantity = (index, quantity) => {
