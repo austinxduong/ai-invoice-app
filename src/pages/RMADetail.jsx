@@ -8,9 +8,11 @@ import axiosInstance from '../utils/axiosInstance';
 import { 
   ArrowLeft, CheckCircle, XCircle, Clock, Package, 
   AlertTriangle, Edit, Trash2, DollarSign, FileText,
-  Eye, RotateCcw, Upload, X, ChevronDown, ChevronUp, Shield, Leaf, Printer
+  Eye, RotateCcw, Upload, X, ChevronDown, ChevronUp, Shield, 
+  Leaf, Printer
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import DestructionModal from '../components/rma/DestructionModal';
 
 const RMADetail = () => {
   const { id } = useParams();
@@ -26,6 +28,7 @@ const RMADetail = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
+  const [showDestructionModal, setShowDestructionModal] = useState(false);
   
   // Forms
   const [rejectionReason, setRejectionReason] = useState('');
@@ -198,6 +201,16 @@ const RMADetail = () => {
       toast.error(error.response?.data?.error || 'Failed to delete RMA');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDestruction = async (destructionData) => {
+    try {
+      await axiosInstance.put(`/rma/${id}/destroy`, destructionData);
+      toast.success('Destruction completed and reported to Metrc!');
+      fetchRMA();
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -443,6 +456,16 @@ const RMADetail = () => {
           )}
         </div>
       </div>
+          {rma.status === 'resolved' && !rma.destructionCompletedDate && (
+            <button
+              onClick={() => setShowDestructionModal(true)}
+              disabled={actionLoading}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Complete Destruction
+            </button>
+          )}
 
       {/* KEEP YOUR EXISTING CUSTOMER & RETURN DETAILS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -682,6 +705,94 @@ const RMADetail = () => {
         </div>
       )}
 
+      {/* Destruction Information */}
+      {rma.destructionCompletedDate && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Destruction Information</h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <dl className="space-y-3">
+                <div>
+                  <dt className="text-sm font-medium text-gray-600">Destruction Date</dt>
+                  <dd className="text-sm text-gray-900">
+                    {new Date(rma.destructionCompletedDate).toLocaleString()}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-600">Method</dt>
+                  <dd className="text-sm text-gray-900 capitalize">
+                    {rma.destructionMethod?.replace(/_/g, ' ')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-600">Location</dt>
+                  <dd className="text-sm text-gray-900">{rma.destructionLocation}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-600">Witness</dt>
+                  <dd className="text-sm text-gray-900">
+                    {rma.destructionWitnessName}
+                    {rma.destructionWitnessTitle && ` (${rma.destructionWitnessTitle})`}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+            
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Waste Totals</h3>
+              <div className="grid grid-cols-3 gap-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div>
+                  <p className="text-xs text-red-600 font-medium">Weight</p>
+                  <p className="text-lg font-bold text-red-700">
+                    {rma.totalWeightDestroyed?.toFixed(2) || 0}g
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-red-600 font-medium">THC</p>
+                  <p className="text-lg font-bold text-red-700">
+                    {rma.totalTHCDestroyed?.toFixed(2) || 0} mg
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-red-600 font-medium">CBD</p>
+                  <p className="text-lg font-bold text-red-700">
+                    {rma.totalCBDDestroyed?.toFixed(2) || 0} mg
+                  </p>
+                </div>
+              </div>
+              
+              {/* Metrc Status */}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">
+                      {rma.metrcReported ? 'Reported to Metrc' : 'Pending Metrc Report'}
+                    </p>
+                    {rma.metrcReportDate && (
+                      <p className="text-xs text-blue-700">
+                        {new Date(rma.metrcReportDate).toLocaleDateString()}
+                      </p>
+                    )}
+                    {rma.metrcAdjustmentId && (
+                      <p className="text-xs text-blue-700 font-mono">
+                        ID: {rma.metrcAdjustmentId}
+                      </p>
+                    )}
+                    {rma.wasteManifestNumber && (
+                      <p className="text-xs text-blue-700 font-mono">
+                        Manifest: {rma.wasteManifestNumber}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KEEP ALL YOUR EXISTING MODALS */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -875,6 +986,15 @@ const RMADetail = () => {
               }
             `}
           </style>
+
+          {showDestructionModal && (
+            <DestructionModal
+              rma={rma}
+              onClose={() => setShowDestructionModal(false)}
+              onComplete={handleDestruction}
+            />
+          )}
+
     </div>
   );
 };
