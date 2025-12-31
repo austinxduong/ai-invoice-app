@@ -1,5 +1,6 @@
 // frontend/src/pages/RMADetail.jsx
-// frontend/src/pages/RMADetail.jsx
+// Updated to work with YOUR existing backend + add inline compliance
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +8,7 @@ import axiosInstance from '../utils/axiosInstance';
 import { 
   ArrowLeft, CheckCircle, XCircle, Clock, Package, 
   AlertTriangle, Edit, Trash2, DollarSign, FileText,
-  Eye, RotateCcw, Upload, X
+  Eye, RotateCcw, Upload, X, ChevronDown, ChevronUp, Shield, Leaf, Printer
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -19,6 +20,7 @@ const RMADetail = () => {
   const [rma, setRMA] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [expandedItems, setExpandedItems] = useState({}); // NEW: For expandable compliance
   
   // Modals
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -28,9 +30,9 @@ const RMADetail = () => {
   // Forms
   const [rejectionReason, setRejectionReason] = useState('');
   const [inspectionForm, setInspectionForm] = useState({
-    inspectionResult: 'confirmed_defective',  // ✅ Match backend field name
-    inspectionNotes: '',                      // ✅ Match backend field name
-    inspectionPhotos: []                      // ✅ Match backend field name
+    inspectionResult: 'confirmed_defective',
+    inspectionNotes: '',
+    inspectionPhotos: []
   });
   const [resolutionForm, setResolutionForm] = useState({
     type: 'refund',
@@ -47,9 +49,9 @@ const RMADetail = () => {
   const fetchRMA = async () => {
     try {
       const response = await axiosInstance.get(`/rma/${id}`);
+      console.log('RMA data:', response.data); // DEBUG
       setRMA(response.data.rma);
       
-      // Set resolution form defaults
       if (response.data.rma) {
         setResolutionForm(prev => ({
           ...prev,
@@ -65,9 +67,29 @@ const RMADetail = () => {
     }
   };
 
+  const toggleItemExpansion = (index) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  const handlePrint = () => {
+  // Auto-expand all items before printing
+  const allExpanded = {};
+  rma.items.forEach((_, index) => {
+    allExpanded[index] = true;
+  });
+  setExpandedItems(allExpanded);
+  
+  // Wait for DOM to update, then print
+  setTimeout(() => {
+    window.print();
+  }, 100);
+};
+
   const handleApprove = async () => {
     if (!window.confirm('Approve this RMA?')) return;
-    
     setActionLoading(true);
     try {
       await axiosInstance.put(`/rma/${id}/approve`);
@@ -85,7 +107,6 @@ const RMADetail = () => {
       toast.error('Please provide a rejection reason');
       return;
     }
-    
     setActionLoading(true);
     try {
       await axiosInstance.put(`/rma/${id}/reject`, { rejectionReason });
@@ -102,7 +123,6 @@ const RMADetail = () => {
 
   const handleMarkReceived = async () => {
     if (!window.confirm('Mark this RMA as received?')) return;
-    
     setActionLoading(true);
     try {
       await axiosInstance.put(`/rma/${id}/receive`);
@@ -120,7 +140,6 @@ const RMADetail = () => {
       toast.error('Please provide inspection notes');
       return;
     }
-    
     setActionLoading(true);
     try {
       await axiosInstance.put(`/rma/${id}/inspect`, inspectionForm);
@@ -156,7 +175,6 @@ const RMADetail = () => {
 
   const handleClose = async () => {
     if (!window.confirm('Close this RMA? This action cannot be undone.')) return;
-    
     setActionLoading(true);
     try {
       await axiosInstance.put(`/rma/${id}/close`);
@@ -171,7 +189,6 @@ const RMADetail = () => {
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this RMA? This cannot be undone.')) return;
-    
     setActionLoading(true);
     try {
       await axiosInstance.delete(`/rma/${id}`);
@@ -213,7 +230,7 @@ const RMADetail = () => {
   const canResolve = user?.permissions?.canManageInvoices && rma?.status === 'inspected';
   const canClose = user?.permissions?.canManageInvoices && rma?.status === 'resolved';
   const canDelete = (rma?.status === 'pending_approval' || user?.isOwner);
-  const canEdit = !['resolved', 'closed', 'rejected'].includes(rma?.status); // ✅ Can edit until resolved
+  const canEdit = !['resolved', 'closed', 'rejected'].includes(rma?.status);
 
   if (loading) {
     return (
@@ -241,7 +258,7 @@ const RMADetail = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Header */}
+      {/* Header - KEEP YOUR EXISTING HEADER */}
       <div className="mb-6">
         <button
           onClick={() => navigate('/rma')}
@@ -270,8 +287,15 @@ const RMADetail = () => {
             </div>
           </div>
           
-          {/* Action Buttons */}
+          {/* Action Buttons - KEEP YOUR EXISTING BUTTONS */}
           <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrint}
+                className="px-4 py-2 border border-gray-600 text-gray-600 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
             {canEdit && (
               <Link
                 to={`/rma/edit/${id}`}
@@ -284,89 +308,53 @@ const RMADetail = () => {
             
             {canApprove && (
               <>
-                <button
-                  onClick={handleApprove}
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Approve
+                <button onClick={handleApprove} disabled={actionLoading} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> Approve
                 </button>
-                <button
-                  onClick={() => setShowRejectModal(true)}
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                >
-                  <XCircle className="w-4 h-4" />
-                  Reject
+                <button onClick={() => setShowRejectModal(true)} disabled={actionLoading} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2">
+                  <XCircle className="w-4 h-4" /> Reject
                 </button>
               </>
             )}
             
             {canReceive && (
-              <button
-                onClick={handleMarkReceived}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                <Package className="w-4 h-4" />
-                Mark Received
+              <button onClick={handleMarkReceived} disabled={actionLoading} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2">
+                <Package className="w-4 h-4" /> Mark Received
               </button>
             )}
             
             {canInspect && (
-              <button
-                onClick={() => setShowInspectionModal(true)}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                <Eye className="w-4 h-4" />
-                Complete Inspection
+              <button onClick={() => setShowInspectionModal(true)} disabled={actionLoading} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2">
+                <Eye className="w-4 h-4" /> Complete Inspection
               </button>
             )}
             
             {canResolve && (
-              <button
-                onClick={() => setShowResolutionModal(true)}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                <CheckCircle className="w-4 h-4" />
-                Resolve
+              <button onClick={() => setShowResolutionModal(true)} disabled={actionLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" /> Resolve
               </button>
             )}
             
             {canClose && (
-              <button
-                onClick={handleClose}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                Close RMA
+              <button onClick={handleClose} disabled={actionLoading} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2">
+                <FileText className="w-4 h-4" /> Close RMA
               </button>
             )}
             
             {canDelete && (
-              <button
-                onClick={handleDelete}
-                disabled={actionLoading}
-                className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
+              <button onClick={handleDelete} disabled={actionLoading} className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-2">
+                <Trash2 className="w-4 h-4" /> Delete
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Status Timeline */}
+      {/* KEEP YOUR EXISTING STATUS TIMELINE */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Status Timeline</h2>
         
         <div className="space-y-4">
-          {/* Created */}
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
               <CheckCircle className="w-4 h-4 text-green-600" />
@@ -379,31 +367,21 @@ const RMADetail = () => {
             </div>
           </div>
 
-          {/* Approved/Rejected */}
           {rma.approvedAt && (
             <div className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full ${rma.status === 'rejected' ? 'bg-red-100' : 'bg-green-100'} flex items-center justify-center flex-shrink-0`}>
-                {rma.status === 'rejected' ? (
-                  <XCircle className="w-4 h-4 text-red-600" />
-                ) : (
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                )}
+                {rma.status === 'rejected' ? <XCircle className="w-4 h-4 text-red-600" /> : <CheckCircle className="w-4 h-4 text-green-600" />}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-gray-900">
-                  {rma.status === 'rejected' ? 'Rejected' : 'Approved'}
-                </p>
+                <p className="font-medium text-gray-900">{rma.status === 'rejected' ? 'Rejected' : 'Approved'}</p>
                 <p className="text-sm text-gray-600">
                   {new Date(rma.approvedAt).toLocaleString()} by {rma.approvedBy?.firstName} {rma.approvedBy?.lastName}
                 </p>
-                {rma.rejectionReason && (
-                  <p className="text-sm text-red-600 mt-1">Reason: {rma.rejectionReason}</p>
-                )}
+                {rma.rejectionReason && <p className="text-sm text-red-600 mt-1">Reason: {rma.rejectionReason}</p>}
               </div>
             </div>
           )}
 
-          {/* Received */}
           {rma.receivedAt && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -418,7 +396,6 @@ const RMADetail = () => {
             </div>
           )}
 
-          {/* Inspected */}
           {rma.inspectionDate && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
@@ -432,14 +409,11 @@ const RMADetail = () => {
                 <p className="text-sm text-gray-700 mt-1">
                   Result: <span className="font-medium">{rma.inspectionResult?.replace(/_/g, ' ')}</span>
                 </p>
-                {rma.inspectionNotes && (
-                  <p className="text-sm text-gray-600 mt-1">Notes: {rma.inspectionNotes}</p>
-                )}
+                {rma.inspectionNotes && <p className="text-sm text-gray-600 mt-1">Notes: {rma.inspectionNotes}</p>}
               </div>
             </div>
           )}
 
-          {/* Resolved */}
           {rma.resolutionDate && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -447,22 +421,13 @@ const RMADetail = () => {
               </div>
               <div className="flex-1">
                 <p className="font-medium text-gray-900">Resolved - {rma.resolutionType?.replace(/_/g, ' ').toUpperCase()}</p>
-                <p className="text-sm text-gray-600">
-                  {new Date(rma.resolutionDate).toLocaleString()}
-                </p>
-                {rma.resolutionType === 'refund' && (
-                  <p className="text-sm text-gray-700 mt-1">Refund Amount: ${rma.refundAmount?.toFixed(2)}</p>
-                )}
-                {rma.resolutionType === 'store_credit' && (
-                  <p className="text-sm text-gray-700 mt-1">
-                    Credit: ${rma.creditAmount?.toFixed(2)} ({rma.creditMemoNumber})
-                  </p>
-                )}
+                <p className="text-sm text-gray-600">{new Date(rma.resolutionDate).toLocaleString()}</p>
+                {rma.resolutionType === 'refund' && <p className="text-sm text-gray-700 mt-1">Refund Amount: ${rma.refundAmount?.toFixed(2)}</p>}
+                {rma.resolutionType === 'store_credit' && <p className="text-sm text-gray-700 mt-1">Credit: ${rma.creditAmount?.toFixed(2)} ({rma.creditMemoNumber})</p>}
               </div>
             </div>
           )}
 
-          {/* Closed */}
           {rma.closedAt && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
@@ -479,8 +444,8 @@ const RMADetail = () => {
         </div>
       </div>
 
+      {/* KEEP YOUR EXISTING CUSTOMER & RETURN DETAILS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Customer Information */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
           <dl className="space-y-3">
@@ -509,7 +474,6 @@ const RMADetail = () => {
           </dl>
         </div>
 
-        {/* Return Details */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Return Details</h2>
           <dl className="space-y-3">
@@ -541,46 +505,167 @@ const RMADetail = () => {
         </div>
       </div>
 
-      {/* Items Being Returned */}
+      {/* ✅ NEW: ITEMS WITH INLINE COMPLIANCE (like Invoice!) */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Items Being Returned</h2>
         
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {rma.items.map((item, index) => (
-                <tr key={index}>
-                  <td className="px-4 py-3 text-sm text-gray-900">{item.productName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.sku || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 capitalize">{item.condition?.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">${item.unitPrice.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">${item.totalValue.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.reason}</td>
-                </tr>
-              ))}
-              <tr className="bg-gray-50">
-                <td colSpan="5" className="px-4 py-3 text-sm font-medium text-gray-900 text-right">Total Return Value:</td>
-                <td className="px-4 py-3 text-sm font-bold text-gray-900">${rma.totalValue.toFixed(2)}</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-4">
+          {rma.items.map((item, index) => {
+            const isExpanded = expandedItems[index];
+            const hasComplianceData = item.batchNumber || item.thcContent || item.cbdContent || item.stateTrackingId;
+            
+            return (
+              <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+                {/* Main Item Row */}
+                <div className="bg-white p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-4">
+                      {/* Product Name */}
+                      <div className="sm:col-span-2">
+                        <p className="font-semibold text-gray-900">{item.productName}</p>
+                        <p className="text-xs text-gray-500 mt-1">{item.sku || '-'}</p>
+                        {item.condition && (
+                          <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded">
+                            {item.condition.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Quantity */}
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500">Quantity</p>
+                        <p className="font-medium text-gray-900">{item.quantity}</p>
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500">Unit Price</p>
+                        <p className="font-medium text-gray-900">${item.unitPrice.toFixed(2)}</p>
+                      </div>
+                      
+                      {/* Total */}
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Total</p>
+                        <p className="text-lg font-bold text-gray-900">${item.totalValue.toFixed(2)}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Expand Button */}
+                    {hasComplianceData && (
+                      <button
+                        onClick={() => toggleItemExpansion(index)}
+                        className="ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="w-5 h-5 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-gray-500" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* ✅ COMPLIANCE DETAILS (Expandable) */}
+                {hasComplianceData && isExpanded && (
+                  <div className="bg-gray-50 border-t border-gray-200 p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Shield className="w-4 h-4 text-green-600" />
+                      <h4 className="text-sm font-semibold text-gray-700">Cannabis Compliance Information</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                      {item.batchNumber && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">Batch Number</p>
+                          <p className="text-gray-900 font-mono">{item.batchNumber}</p>
+                        </div>
+                      )}
+                      
+                      {item.stateTrackingId && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">State Tracking ID</p>
+                          <p className="text-gray-900 font-mono text-xs break-all">  {/* ✅ Add break-all */}
+                            {item.stateTrackingId}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {(item.thcContent !== null && item.thcContent !== undefined) && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">THC Content</p>
+                          <p className="text-gray-900">
+                            {item.thcContent}%
+                            {item.thcMg > 0 && <span className="text-gray-600 text-xs ml-1">({item.thcMg.toFixed(2)} mg)</span>}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {(item.cbdContent !== null && item.cbdContent !== undefined) && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">CBD Content</p>
+                          <p className="text-gray-900">
+                            {item.cbdContent}%
+                            {item.cbdMg > 0 && <span className="text-gray-600 text-xs ml-1">({item.cbdMg.toFixed(2)} mg)</span>}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {item.weight && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">Weight (per unit)</p>
+                          <p className="text-gray-900">{item.weight}g</p>
+                        </div>
+                      )}
+                      
+                      {item.localPackagedDate && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">Packaged Date</p>
+                          <p className="text-gray-900 text-xs">{item.localPackagedDate}</p>
+                        </div>
+                      )}
+                      
+                      {item.localExpirationDate && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">Expiration Date</p>
+                          <p className="text-gray-900 text-xs">{item.localExpirationDate}</p>
+                        </div>
+                      )}
+                      
+                      {item.licensedProducer && (
+                        <div className="sm:col-span-2">
+                          <p className="text-xs text-gray-500 font-medium mb-1">Licensed Producer</p>
+                          <p className="text-gray-900">{item.licensedProducer}</p>
+                          {item.producerLicense && (
+                            <p className="text-xs text-gray-600">License: {item.producerLicense}</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {item.reason && (
+                        <div className="sm:col-span-3 pt-3 border-t border-gray-300">
+                          <p className="text-xs text-gray-500 font-medium mb-1">Return Reason</p>
+                          <p className="text-gray-900">{item.reason}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          
+          {/* Total */}
+          <div className="flex justify-end pt-4 border-t border-gray-300">
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Total Return Value</p>
+              <p className="text-2xl font-bold text-gray-900">${rma.totalValue.toFixed(2)}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Inspection Photos */}
+      {/* KEEP YOUR EXISTING INSPECTION PHOTOS */}
       {rma.inspectionPhotos && rma.inspectionPhotos.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Inspection Photos</h2>
@@ -597,7 +682,7 @@ const RMADetail = () => {
         </div>
       )}
 
-      {/* Reject Modal */}
+      {/* KEEP ALL YOUR EXISTING MODALS */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -635,7 +720,6 @@ const RMADetail = () => {
         </div>
       )}
 
-      {/* Inspection Modal */}
       {showInspectionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -643,9 +727,7 @@ const RMADetail = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inspection Result *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Inspection Result *</label>
                 <select
                   value={inspectionForm.inspectionResult}
                   onChange={(e) => setInspectionForm({ ...inspectionForm, inspectionResult: e.target.value })}
@@ -659,9 +741,7 @@ const RMADetail = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inspection Notes *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Inspection Notes *</label>
                 <textarea
                   value={inspectionForm.inspectionNotes}
                   onChange={(e) => setInspectionForm({ ...inspectionForm, inspectionNotes: e.target.value })}
@@ -673,17 +753,8 @@ const RMADetail = () => {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowInspectionModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCompleteInspection}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
-              >
+              <button onClick={() => setShowInspectionModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={handleCompleteInspection} disabled={actionLoading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
                 {actionLoading ? 'Saving...' : 'Complete Inspection'}
               </button>
             </div>
@@ -691,7 +762,6 @@ const RMADetail = () => {
         </div>
       )}
 
-      {/* Resolution Modal */}
       {showResolutionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -699,9 +769,7 @@ const RMADetail = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Resolution Type *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Resolution Type *</label>
                 <select
                   value={resolutionForm.type}
                   onChange={(e) => setResolutionForm({ ...resolutionForm, type: e.target.value })}
@@ -716,80 +784,97 @@ const RMADetail = () => {
 
               {resolutionForm.type === 'refund' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Refund Amount
-                  </label>
-                  <input
-                    type="number"
-                    value={resolutionForm.refundAmount}
-                    onChange={(e) => setResolutionForm({ ...resolutionForm, refundAmount: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Refund Amount</label>
+                  <input type="number" value={resolutionForm.refundAmount} onChange={(e) => setResolutionForm({ ...resolutionForm, refundAmount: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
               )}
 
               {resolutionForm.type === 'store_credit' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Credit Amount
-                    </label>
-                    <input
-                      type="number"
-                      value={resolutionForm.creditAmount}
-                      onChange={(e) => setResolutionForm({ ...resolutionForm, creditAmount: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Credit Amount</label>
+                    <input type="number" value={resolutionForm.creditAmount} onChange={(e) => setResolutionForm({ ...resolutionForm, creditAmount: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Credit Memo Number
-                    </label>
-                    <input
-                      type="text"
-                      value={resolutionForm.creditMemoNumber}
-                      onChange={(e) => setResolutionForm({ ...resolutionForm, creditMemoNumber: e.target.value })}
-                      placeholder="CM-2025-001"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Credit Memo Number</label>
+                    <input type="text" value={resolutionForm.creditMemoNumber} onChange={(e) => setResolutionForm({ ...resolutionForm, creditMemoNumber: e.target.value })} placeholder="CM-2025-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
                   </div>
                 </>
               )}
 
               {resolutionForm.type === 'replacement' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Replacement Order ID
-                  </label>
-                  <input
-                    type="text"
-                    value={resolutionForm.replacementOrderId}
-                    onChange={(e) => setResolutionForm({ ...resolutionForm, replacementOrderId: e.target.value })}
-                    placeholder="INV-2025-001"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Replacement Order ID</label>
+                  <input type="text" value={resolutionForm.replacementOrderId} onChange={(e) => setResolutionForm({ ...resolutionForm, replacementOrderId: e.target.value })} placeholder="INV-2025-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
               )}
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowResolutionModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleResolve}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
+              <button onClick={() => setShowResolutionModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={handleResolve} disabled={actionLoading} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                 {actionLoading ? 'Resolving...' : 'Resolve RMA'}
               </button>
             </div>
           </div>
         </div>
       )}
+            {/* ✅ ADD PRINT STYLES */}
+          <style>
+            {`
+              @media print {
+                /* Hide EVERYTHING first */
+                body * {
+                  visibility: hidden;
+                }
+                
+                /* Show ONLY the RMA content */
+                .max-w-6xl, .max-w-6xl * {
+                  visibility: visible;
+                }
+                
+                /* Position at top of page */
+                .max-w-6xl {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                  max-width: 100%;
+                  margin: 0;
+                  padding: 0;
+                }
+                
+                /* Page setup */
+                @page {
+                  margin: 0.75in;
+                  size: letter portrait;
+                }
+                
+                /* Remove shadows and borders */
+                .bg-white {
+                  box-shadow: none !important;
+                  border-radius: 0 !important;
+                }
+                
+                /* Ensure colors print */
+                * {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                
+                /* Auto-show compliance sections */
+                [class*="bg-gray-50"] {
+                  display: block !important;
+                  visibility: visible !important;
+                }
+                
+                /* Hide chevron buttons */
+                button svg {
+                  display: none !important;
+                }
+              }
+            `}
+          </style>
     </div>
   );
 };
