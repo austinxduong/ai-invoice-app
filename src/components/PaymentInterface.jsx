@@ -93,44 +93,70 @@ const PaymentInterface = ({ onComplete, creditApplied = 0, availableCredit = nul
 
 const handleProcessPayment = async () => {
   if (cashReceived.toFixed(2) < finalTotal.toFixed(2)) {
-    alert('Insufficient cash received');
+    toast.error('Insufficient cash received');
     return;
   }
 
   try {
-    // ✅ Generate unique transaction ID
+    // ✅ DEBUG: See what's in items
+    console.log('🔍 Items in cart:', items);
+    console.log('🔍 First item:', items[0]);
+    
+    // Generate transaction ID
     const transactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const receiptNumber = `RCP-${Date.now()}`;
-
-    // ✅ Step 1: Prepare receipt data with transactionId
-    const receiptData = {
-      transactionId: transactionId,  // ✅ Add this!
-      cashReceived,
-      changeAmount: cashReceived - finalTotal,
-      paymentMethod: 'cash',
-      timestamp: new Date(),
-      items: items.map(item => ({
-        ...item,
-        lineTotal: (item.pricingOption?.price || 0) * item.quantity
-      })),
+    
+    // ✅ Structure data to match backend expectations
+const transactionData = {
+      transactionId: transactionId,
+      items: items.map(item => {
+        console.log('🔍 Mapping item:', item); // Debug
+        return {
+          id: item.id,  // ✅ Make sure this exists!
+          name: item.name,
+          sku: item.sku,
+          category: item.category,
+          subcategory: item.subcategory,
+          pricingOption: item.pricingOption,
+          quantity: item.quantity,
+          cannabis: item.cannabis || {}
+        };
+      }),
       totals: {
-        ...totals,
-        itemCount: items.length,
-        creditApplied: creditApplied,
-        finalTotal: finalTotal
+        subtotal: totals.subtotal,
+        discountAmount: totals.discountAmount || 0,
+        discountedSubtotal: totals.discountedSubtotal || totals.subtotal,
+        taxAmount: totals.taxAmount,
+        grandTotal: totals.grandTotal,
+        changeAmount: cashReceived - finalTotal,
+        creditApplied: creditApplied,  // ✅ Include credit
+        finalTotal: finalTotal          // ✅ Include final total
+      },
+      discount: totals.discountAmount > 0 ? {
+        amount: totals.discountAmount,
+        type: 'manual'
+      } : null,
+      paymentMethod: 'cash',
+      cashReceived: cashReceived,
+      customerInfo: {
+        name: 'Walk-in Customer',
+        phone: '',
+        email: ''
       },
       receiptData: {
         receiptNumber: receiptNumber,
         timestamp: new Date(),
+        localDateString: new Date().toLocaleDateString('en-US'),
+        localTimeString: new Date().toLocaleTimeString('en-US'),
         printed: false,
         emailed: false
       }
     };
 
-    // ✅ Step 2: Save to database FIRST
+    // Save to database
     let savedTransaction;
     try {
-      const response = await axiosInstance.post('/transactions', receiptData);
+      const response = await axiosInstance.post('/transactions', transactionData);
       savedTransaction = response.data.transaction;
       console.log('✅ Transaction saved to database:', savedTransaction._id);
     } catch (dbError) {
@@ -139,7 +165,7 @@ const handleProcessPayment = async () => {
       return;
     }
 
-    // ✅ Step 3: Apply credit with real transaction ID
+    // Apply credit with real transaction ID
     if (creditApplied > 0 && availableCredit && availableCredit.credits) {
       try {
         const firstCredit = availableCredit.credits[0];
@@ -155,23 +181,23 @@ const handleProcessPayment = async () => {
         toast.success(`Store credit applied: $${creditApplied.toFixed(2)}`);
       } catch (creditError) {
         console.error('❌ Failed to apply credit:', creditError);
-        toast.error('Transaction complete but credit application failed');
+        toast.error('Transaction complete but credit tracking failed');
       }
     }
 
-    // ✅ Step 4: Update local state
-    const completedTransaction = completeTransaction(receiptData);
-    setTransaction(savedTransaction); // Use savedTransaction instead
+    // Update local state with the saved transaction
+    setTransaction(savedTransaction);
     setPaymentComplete(true);
   
     if (onComplete) {
-      onComplete(savedTransaction); // Pass the saved transaction
+      onComplete(savedTransaction);
     }
     
     toast.success('Payment successful!');
+    
   } catch (error) {
     console.error('Payment error:', error);
-    toast.error('Payment failed');
+    toast.error('Payment failed: ' + error.message);
   }
 };
 
