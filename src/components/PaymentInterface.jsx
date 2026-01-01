@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Calculator, Check, ArrowLeft, Receipt } from 'lucide-react';
+import { DollarSign, Calculator, Check, ArrowLeft, Receipt, CreditCard } from 'lucide-react';
 import { usePOSTransaction } from '../context/POSTransaction';
+import axiosInstance from '../utils/axiosInstance';
+import toast from 'react-hot-toast';
 
-const PaymentInterface = ({ onComplete }) => {
+// ✅ CHANGE 1: Add credit props
+const PaymentInterface = ({ onComplete, creditApplied = 0, availableCredit = null }) => {
   const { 
     totals, 
     items, 
@@ -16,35 +19,33 @@ const PaymentInterface = ({ onComplete }) => {
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [transaction, setTransaction] = useState(null);
 
-const baseTotal = parseFloat(totals.grandTotal.toFixed(2));
+  // ✅ CHANGE 2: Calculate final total after credit
+  const finalTotal = Math.max(0, totals.grandTotal - creditApplied);
+  const baseTotal = parseFloat(finalTotal.toFixed(2)); // Use finalTotal instead of totals.grandTotal
 
+  const quickAmounts = [
+    baseTotal, // Exact amount
+    Math.ceil(baseTotal / 1) * 1,
+    Math.ceil(baseTotal / 5) * 5,
+    Math.ceil(baseTotal / 10) * 10,
+    Math.ceil(baseTotal / 20) * 20,
+    50, 100,
+  ]
+    .filter(amount => amount >= baseTotal)
+    .reduce((unique, amount) => {
+      if (!unique.find(a => Math.abs(a - amount) < 0.01)) {
+        unique.push(amount);
+      }
+      return unique;
+    }, [])
+    .sort((a, b) => a - b)
+    .slice(0, 6);
 
-const quickAmounts = [
-  baseTotal, // Exact amount
-  Math.ceil(baseTotal / 1) * 1,
-  Math.ceil(baseTotal / 5) * 5, // Round to nearest $5
-  Math.ceil(baseTotal / 10) * 10, // Round to nearest $10
-  Math.ceil(baseTotal / 20) * 20, // Round to nearest $20
-  50, 100, // Common cash amounts
-]
-  .filter(amount => amount >= baseTotal)
-  .reduce((unique, amount) => {
-    // Better deduplication
-    if (!unique.find(a => Math.abs(a - amount) < 0.01)) {
-      unique.push(amount);
-    }
-    return unique;
-  }, [])
-  .sort((a, b) => a - b)
-  .slice(0, 6); // Limit to 6 buttons max
-
-  // Update cash received when input changes
   useEffect(() => {
     const amount = parseFloat(cashInput) || 0;
     setCashReceived(amount);
   }, [cashInput]);
 
-  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -52,7 +53,6 @@ const quickAmounts = [
     }).format(amount);
   };
 
-  // Handle number pad input
   const handleNumberInput = (value) => {
     if (paymentComplete) return;
 
@@ -66,21 +66,18 @@ const quickAmounts = [
       return;
     }
 
-    // Handle decimal point
     if (value === '.' && !cashInput.includes('.')) {
       setCashInput(prev => prev + '.');
       return;
     }
 
-    // Handle numbers
     if (typeof value === 'number' || (typeof value === 'string' && !isNaN(value))) {
       setCashInput(prev => {
-        const newValue = prev + value.toString(); // concatenates/appends numbers together via. calculator style, and updates cashInput state
-        // Prevent more than 2 decimal places
-        if (newValue.includes('.')) { // 12.008 // aka invalid
-          const parts = newValue.split('.'); // 12.00 = ["12", "008"]
-          if (parts[1] && parts[1].length > 2) { // 12.008 parts[1] > 2. return previous state 12.00
-            return prev; // 12.00
+        const newValue = prev + value.toString();
+        if (newValue.includes('.')) {
+          const parts = newValue.split('.');
+          if (parts[1] && parts[1].length > 2) {
+            return prev;
           }
         }
         return newValue;
@@ -88,65 +85,100 @@ const quickAmounts = [
     }
   };
 
-  // Handle quick amount selection
-const handleQuickAmount = (amount) => {
-  if (paymentComplete) return;
-  // Round to 2 decimal places to fix precision issues
-  const roundedAmount = Math.round(amount * 100) / 100;
-  setCashInput(roundedAmount.toFixed(2));
-};
+  const handleQuickAmount = (amount) => {
+    if (paymentComplete) return;
+    const roundedAmount = Math.round(amount * 100) / 100;
+    setCashInput(roundedAmount.toFixed(2));
+  };
 
-  // Process payment
-
-const handleProcessPayment = () => {
-    if (cashReceived.toFixed(2) < totals.grandTotal.toFixed(2)) {
-        alert('Insufficient cash received');
+const handleProcessPayment = async () => {
+  if (cashReceived.toFixed(2) < finalTotal.toFixed(2)) {
+    alert('Insufficient cash received');
     return;
-    // returns exact amount 19.06
-}
-
-// this works, but outputs 1906 instead of 19.06
-// const handleProcessPayment = () => {
-//     if (Math.round(cashReceived * 100) < Math.round(totals.grandTotal * 100)) {
-//         alert('Insufficient cash received');
-//     return;
-// }
-
-
-
-    // create comprehensive receipt data
-  const receiptData = {
-    cashReceived,
-    changeAmount: totals.changeAmount,
-    paymentMethod: 'cash',
-    timestamp: new Date(),
-    // FIXED: was "itesm", now "items" with full details
-    items: items.map(item => ({
-      ...item, // Include ALL item details (name, sku, cannabis info, etc.)
-      lineTotal: (item.pricingOption?.price || 0) * item.quantity
-    })),
-    totals: {
-      ...totals,
-      itemCount: items.length
-    }
   }
 
-    const completedTransaction = completeTransaction(receiptData);
+  try {
+    // ✅ Generate unique transaction ID
+    const transactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const receiptNumber = `RCP-${Date.now()}`;
 
-    setTransaction(completedTransaction);
+    // ✅ Step 1: Prepare receipt data with transactionId
+    const receiptData = {
+      transactionId: transactionId,  // ✅ Add this!
+      cashReceived,
+      changeAmount: cashReceived - finalTotal,
+      paymentMethod: 'cash',
+      timestamp: new Date(),
+      items: items.map(item => ({
+        ...item,
+        lineTotal: (item.pricingOption?.price || 0) * item.quantity
+      })),
+      totals: {
+        ...totals,
+        itemCount: items.length,
+        creditApplied: creditApplied,
+        finalTotal: finalTotal
+      },
+      receiptData: {
+        receiptNumber: receiptNumber,
+        timestamp: new Date(),
+        printed: false,
+        emailed: false
+      }
+    };
+
+    // ✅ Step 2: Save to database FIRST
+    let savedTransaction;
+    try {
+      const response = await axiosInstance.post('/transactions', receiptData);
+      savedTransaction = response.data.transaction;
+      console.log('✅ Transaction saved to database:', savedTransaction._id);
+    } catch (dbError) {
+      console.error('❌ Failed to save transaction:', dbError);
+      toast.error('Failed to create transaction');
+      return;
+    }
+
+    // ✅ Step 3: Apply credit with real transaction ID
+    if (creditApplied > 0 && availableCredit && availableCredit.credits) {
+      try {
+        const firstCredit = availableCredit.credits[0];
+        
+        await axiosInstance.post('/rma/pos/apply-credit', {
+          creditMemoNumber: firstCredit.creditMemoNumber,
+          amountToApply: creditApplied,
+          transactionId: savedTransaction._id,
+          registerId: 'register-1'
+        });
+
+        console.log('✅ Store credit applied to transaction');
+        toast.success(`Store credit applied: $${creditApplied.toFixed(2)}`);
+      } catch (creditError) {
+        console.error('❌ Failed to apply credit:', creditError);
+        toast.error('Transaction complete but credit application failed');
+      }
+    }
+
+    // ✅ Step 4: Update local state
+    const completedTransaction = completeTransaction(receiptData);
+    setTransaction(savedTransaction); // Use savedTransaction instead
     setPaymentComplete(true);
   
     if (onComplete) {
-        onComplete(completedTransaction);
+      onComplete(savedTransaction); // Pass the saved transaction
     }
+    
+    toast.success('Payment successful!');
+  } catch (error) {
+    console.error('Payment error:', error);
+    toast.error('Payment failed');
+  }
 };
 
-  // Start new transaction
   const handleNewTransaction = () => {
     setPaymentComplete(false);
     setCashInput('');
     setTransaction(null);
-    // Don't clear transaction here - let the user decide
   };
 
   if (paymentComplete && transaction) {
@@ -169,11 +201,33 @@ const handleProcessPayment = () => {
           </h2>
           <div className="text-right">
             <p className="text-sm text-gray-600">Total Due</p>
+            {/* ✅ CHANGE 6: Show finalTotal instead of grandTotal */}
             <p className="text-3xl font-bold text-green-600">
-              {formatCurrency(totals.grandTotal)}
+              {formatCurrency(finalTotal)}
             </p>
           </div>
         </div>
+
+        {/* ✅ CHANGE 7: Show credit applied notice */}
+        {creditApplied > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-900">
+                  ✓ Store Credit Applied
+                </p>
+                {availableCredit?.customer && (
+                  <p className="text-xs text-green-700 mt-1">
+                    {availableCredit.customer.name}
+                  </p>
+                )}
+              </div>
+              <span className="text-2xl font-bold text-green-600">
+                -${creditApplied.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Legal Notice */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
@@ -229,7 +283,6 @@ const handleProcessPayment = () => {
               </button>
             ))}
             
-            {/* Bottom Row */}
             <button
               onClick={() => handleNumberInput('clear')}
               className="p-4 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors"
@@ -251,7 +304,6 @@ const handleProcessPayment = () => {
               .
             </button>
             
-            {/* Backspace */}
             <button
               onClick={() => handleNumberInput('backspace')}
               className="col-span-3 p-4 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
@@ -290,12 +342,27 @@ const handleProcessPayment = () => {
                 <span className="text-green-600">{formatCurrency(totals.grandTotal)}</span>
               </div>
             </div>
+
+            {/* ✅ CHANGE 8: Show credit deduction */}
+            {creditApplied > 0 && (
+              <>
+                <div className="flex justify-between text-base font-semibold text-green-600">
+                  <span>Store Credit</span>
+                  <span>-{formatCurrency(creditApplied)}</span>
+                </div>
+                
+                <div className="flex justify-between text-xl font-bold pt-2 border-t-2 border-green-500">
+                  <span>Amount Due</span>
+                  <span className="text-green-600">{formatCurrency(finalTotal)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Payment Status */}
           <div className="space-y-4">
             <div className={`p-4 rounded-lg border-2 ${
-              Math.round(cashReceived * 100) >= Math.round(totals.grandTotal * 100)
+              Math.round(cashReceived * 100) >= Math.round(finalTotal * 100)
                 ? 'bg-green-50 border-green-200'
                 : cashReceived > 0
                 ? 'bg-yellow-50 border-yellow-200'
@@ -312,42 +379,34 @@ const handleProcessPayment = () => {
                 <div className="mt-2 pt-2 border-t">
                   <div className="flex justify-between items-center">
                     <span className={`font-medium ${
-                      cashReceived >= totals.grandTotal ? 'text-green-700' : 'text-yellow-700'
+                      cashReceived >= finalTotal ? 'text-green-700' : 'text-yellow-700'
                     }`}>
-                      {cashReceived >= totals.grandTotal ? 'Change Due' : 'Still Owed'}
+                      {cashReceived >= finalTotal ? 'Change Due' : 'Still Owed'}
                     </span>
                     <span className={`text-xl font-bold ${
-                      cashReceived >= totals.grandTotal ? 'text-green-700' : 'text-yellow-700'
+                      cashReceived >= finalTotal ? 'text-green-700' : 'text-yellow-700'
                     }`}>
-                      {formatCurrency(Math.abs(cashReceived - totals.grandTotal))}
+                      {formatCurrency(Math.abs(cashReceived - finalTotal))}
                     </span>
                   </div>
                 </div>
               )}
             </div>
-
-            <div className="text-xs text-gray-500 p-2 bg-yellow-50 rounded mb-2">
-                <div>Debug Info:</div>
-                <div>cashReceived: {cashReceived}</div>
-                <div>grandTotal: {totals.grandTotal.toFixed(2)} </div>
-                <div>Comparison: {cashReceived >= totals.grandTotal ? 'TRUE' : 'FALSE'}</div>
-                <div>Rounded comparison: {Math.round(cashReceived * 100) >= Math.round(totals.grandTotal * 100) ? 'TRUE' : 'FALSE'}</div>
-            </div>
             
-            {/* Process Payment Button */}
+            {/* Complete Payment Button */}
             <button
-                onClick={handleProcessPayment}
-                disabled={parseFloat(cashReceived.toFixed(2)) < parseFloat(totals.grandTotal.toFixed(2))}
-                className={`w-full py-4 rounded-lg font-bold text-lg transition-colors ${
-                    parseFloat(cashReceived.toFixed(2)) >= parseFloat(totals.grandTotal.toFixed(2))
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-                >
-                {parseFloat(cashReceived.toFixed(2)) >= parseFloat(totals.grandTotal.toFixed(2))
-                    ? `Complete Transaction ${totals.changeAmount > 0 ? `• Change: ${formatCurrency(totals.changeAmount)}` : ''}`
-                    : `Need ${formatCurrency(totals.grandTotal - cashReceived)} More`
-            }
+              onClick={handleProcessPayment}
+              disabled={parseFloat(cashReceived.toFixed(2)) < parseFloat(finalTotal.toFixed(2))}
+              className={`w-full py-4 rounded-lg font-bold text-lg transition-colors ${
+                parseFloat(cashReceived.toFixed(2)) >= parseFloat(finalTotal.toFixed(2))
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {parseFloat(cashReceived.toFixed(2)) >= parseFloat(finalTotal.toFixed(2))
+                ? `Complete Transaction ${(cashReceived - finalTotal) > 0 ? `• Change: ${formatCurrency(cashReceived - finalTotal)}` : ''}`
+                : `Need ${formatCurrency(finalTotal - cashReceived)} More`
+              }
             </button>
           </div>
         </div>
@@ -356,9 +415,7 @@ const handleProcessPayment = () => {
   );
 };
 
-
-
-// Payment Complete Component
+// Payment Complete Component (unchanged)
 const PaymentComplete = ({ transaction, onNewTransaction }) => {
   const { clearTransaction } = usePOSTransaction();
 
@@ -374,7 +431,6 @@ const PaymentComplete = ({ transaction, onNewTransaction }) => {
     onNewTransaction();
   };
 
-  // Handle both localStorage format and database format
   const getTransactionId = () => {
     return transaction.transactionId || transaction.id || transaction._id || 'N/A';
   };
@@ -397,7 +453,6 @@ const PaymentComplete = ({ transaction, onNewTransaction }) => {
 
   return (
     <div className="text-center space-y-6">
-      {/* Success Header */}
       <div className="bg-green-50 rounded-lg p-8">
         <div className="flex justify-center mb-4">
           <div className="bg-green-600 rounded-full p-3">
@@ -412,7 +467,6 @@ const PaymentComplete = ({ transaction, onNewTransaction }) => {
         </p>
       </div>
 
-      {/* Transaction Details */}
       <div className="bg-white rounded-lg shadow p-6 text-left">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Summary</h3>
         
@@ -446,7 +500,6 @@ const PaymentComplete = ({ transaction, onNewTransaction }) => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
           onClick={handleNewTransaction}

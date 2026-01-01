@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DestructionModal from '../components/rma/DestructionModal';
+import CashRefundModal from '../components/rma/CashRefundModal';
+import RefundReceipt from '../components/rma/RefundReceipt';
+import ResolutionModal from '../components/rma/ResolutionModal';
 
 const RMADetail = () => {
   const { id } = useParams();
@@ -29,6 +32,8 @@ const RMADetail = () => {
   const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
   const [showDestructionModal, setShowDestructionModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundReceiptData, setRefundReceiptData] = useState(null);
   
   // Forms
   const [rejectionReason, setRejectionReason] = useState('');
@@ -36,13 +41,6 @@ const RMADetail = () => {
     inspectionResult: 'confirmed_defective',
     inspectionNotes: '',
     inspectionPhotos: []
-  });
-  const [resolutionForm, setResolutionForm] = useState({
-    type: 'refund',
-    refundAmount: 0,
-    creditAmount: 0,
-    creditMemoNumber: '',
-    replacementOrderId: ''
   });
 
   useEffect(() => {
@@ -54,14 +52,6 @@ const RMADetail = () => {
       const response = await axiosInstance.get(`/rma/${id}`);
       console.log('RMA data:', response.data); // DEBUG
       setRMA(response.data.rma);
-      
-      if (response.data.rma) {
-        setResolutionForm(prev => ({
-          ...prev,
-          refundAmount: response.data.rma.totalValue,
-          creditAmount: response.data.rma.totalValue
-        }));
-      }
     } catch (error) {
       console.error('Error fetching RMA:', error);
       toast.error('Failed to load RMA details');
@@ -156,25 +146,31 @@ const RMADetail = () => {
     }
   };
 
-  const handleResolve = async () => {
-    setActionLoading(true);
-    try {
-      await axiosInstance.put(`/rma/${id}/resolve`, {
-        resolutionType: resolutionForm.type,
-        refundAmount: resolutionForm.refundAmount,
-        creditAmount: resolutionForm.creditAmount,
-        creditMemoNumber: resolutionForm.creditMemoNumber,
-        replacementOrderId: resolutionForm.replacementOrderId
+const handleResolve = async (resolutionData) => {
+  setActionLoading(true);
+  try {
+    // If store credit, use the credit endpoint
+    if (resolutionData.resolutionType === 'store_credit') {
+      await axiosInstance.put(`/rma/${id}/issue-credit`, {
+        creditAmount: resolutionData.creditAmount,
+        creditMemoNumber: resolutionData.creditMemoNumber,
+        expirationMonths: 12 // Optional: 1 year expiration
       });
-      toast.success('RMA resolved!');
-      setShowResolutionModal(false);
-      fetchRMA();
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to resolve RMA');
-    } finally {
-      setActionLoading(false);
+    } else {
+      // Other resolution types use the regular resolve endpoint
+      await axiosInstance.put(`/rma/${id}/resolve`, resolutionData);
     }
-  };
+    
+    toast.success('RMA resolved!');
+    setShowResolutionModal(false);
+    fetchRMA();
+  } catch (error) {
+    toast.error(error.response?.data?.error || 'Failed to resolve RMA');
+    throw error;
+  } finally {
+    setActionLoading(false);
+  }
+};
 
   const handleClose = async () => {
     if (!window.confirm('Close this RMA? This action cannot be undone.')) return;
@@ -204,6 +200,26 @@ const RMADetail = () => {
     }
   };
 
+    const handleProcessRefund = async (refundData, printReceipt) => {
+      try {
+        // Process refund
+        const response = await axiosInstance.put(`/rma/${id}/process-refund`, refundData);
+        
+        // Get receipt if printing
+        if (printReceipt) {
+          const receiptResponse = await axiosInstance.get(`/rma/${id}/refund-receipt`);
+          setRefundReceiptData(receiptResponse.data.receipt);
+        }
+        
+        // Refresh RMA
+        fetchRMA();
+        
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    };
+
   const handleDestruction = async (destructionData) => {
     try {
       await axiosInstance.put(`/rma/${id}/destroy`, destructionData);
@@ -213,6 +229,8 @@ const RMADetail = () => {
       throw error;
     }
   };
+
+
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -456,11 +474,12 @@ const RMADetail = () => {
           )}
         </div>
       </div>
+
           {rma.status === 'resolved' && !rma.destructionCompletedDate && (
             <button
               onClick={() => setShowDestructionModal(true)}
               disabled={actionLoading}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 mb-2"
             >
               <Trash2 className="w-4 h-4" />
               Complete Destruction
@@ -873,63 +892,15 @@ const RMADetail = () => {
         </div>
       )}
 
-      {showResolutionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resolve RMA</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Resolution Type *</label>
-                <select
-                  value={resolutionForm.type}
-                  onChange={(e) => setResolutionForm({ ...resolutionForm, type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="refund">Refund</option>
-                  <option value="replacement">Replacement</option>
-                  <option value="store_credit">Store Credit</option>
-                  <option value="reject">Reject Claim</option>
-                </select>
-              </div>
+            {showResolutionModal && (
+            <ResolutionModal
+              rma={rma}
+              onClose={() => setShowResolutionModal(false)}
+              onResolve={handleResolve}
+              onOpenRefundModal={() => setShowRefundModal(true)}
+            />
+          )}
 
-              {resolutionForm.type === 'refund' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Refund Amount</label>
-                  <input type="number" value={resolutionForm.refundAmount} onChange={(e) => setResolutionForm({ ...resolutionForm, refundAmount: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-              )}
-
-              {resolutionForm.type === 'store_credit' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Credit Amount</label>
-                    <input type="number" value={resolutionForm.creditAmount} onChange={(e) => setResolutionForm({ ...resolutionForm, creditAmount: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Credit Memo Number</label>
-                    <input type="text" value={resolutionForm.creditMemoNumber} onChange={(e) => setResolutionForm({ ...resolutionForm, creditMemoNumber: e.target.value })} placeholder="CM-2025-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
-                  </div>
-                </>
-              )}
-
-              {resolutionForm.type === 'replacement' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Replacement Order ID</label>
-                  <input type="text" value={resolutionForm.replacementOrderId} onChange={(e) => setResolutionForm({ ...resolutionForm, replacementOrderId: e.target.value })} placeholder="INV-2025-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowResolutionModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button onClick={handleResolve} disabled={actionLoading} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                {actionLoading ? 'Resolving...' : 'Resolve RMA'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
             {/* ✅ ADD PRINT STYLES */}
           <style>
             {`
@@ -992,6 +963,23 @@ const RMADetail = () => {
               rma={rma}
               onClose={() => setShowDestructionModal(false)}
               onComplete={handleDestruction}
+            />
+          )}
+
+          {/* Cash Refund Modal */}
+          {showRefundModal && (
+            <CashRefundModal
+              rma={rma}
+              onClose={() => setShowRefundModal(false)}
+              onComplete={handleProcessRefund}
+            />
+          )}
+
+          {/* Refund Receipt (for printing) */}
+          {refundReceiptData && (
+            <RefundReceipt
+              receiptData={refundReceiptData}
+              onPrinted={() => setRefundReceiptData(null)}
             />
           )}
 

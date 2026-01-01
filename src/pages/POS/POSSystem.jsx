@@ -5,35 +5,69 @@ import ProductSearch from '../../components/ProductSearch';
 import TransactionSummary from '../../components/TransactionSummary';
 import PaymentInterface from '../../components/PaymentInterface';
 import ReceiptModal from '../../components/ReceiptModal';
+import CreditLookup from '../../components/POS/CreditLookup';
 
 const POSSystem = () => {
   const { hasItems, totals, itemCount } = usePOSTransaction();
   const [currentView, setCurrentView] = useState('products');
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [completedTransaction, setCompletedTransaction] = useState(null);
+  
+  // ✅ Store credit state
+  const [availableCredit, setAvailableCredit] = useState(null);
+  const [creditApplied, setCreditApplied] = useState(0);
 
-const handlePaymentComplete = async (transactionPromise) => {
+  const handlePaymentComplete = async (transactionPromise) => {
     try {
-        console.log('💳 Payment processing...');
+      console.log('💳 Payment processing...');
+      
+      const transaction = await transactionPromise;
+      
+      console.log('💳 Payment completed, showing receipt for:', transaction);
+      
+      if (transaction) {
+        setCompletedTransaction(transaction);
+        setCurrentView('products');
+        setShowReceiptModal(true);
         
-        // Wait for the transaction Promise to resolve
-        const transaction = await transactionPromise;
-        
-        console.log('💳 Payment completed, showing receipt for:', transaction);
-        
-        if (transaction) {
-            setCompletedTransaction(transaction);
-            setCurrentView('products');
-            setShowReceiptModal(true);
-        } else {
-            console.error('❌ No transaction received');
-        }
-        
+        // Reset credit state after successful transaction
+        setAvailableCredit(null);
+        setCreditApplied(0);
+      } else {
+        console.error('❌ No transaction received');
+      }
+      
     } catch (error) {
-        console.error('❌ Error completing payment:', error);
+      console.error('❌ Error completing payment:', error);
     }
-};
+  };
 
+  // Handle credit found from lookup
+  const handleCreditFound = (creditData) => {
+    setAvailableCredit(creditData);
+    console.log('💳 Store credit found:', creditData);
+  };
+
+  // Apply store credit to transaction
+  const applyCredit = () => {
+    if (!availableCredit || availableCredit.balance <= 0) return;
+    
+    const maxCredit = Math.min(
+      availableCredit.balance,
+      totals.grandTotal
+    );
+    
+    setCreditApplied(maxCredit);
+    console.log(`💳 Applied $${maxCredit.toFixed(2)} store credit`);
+  };
+
+  // Remove applied credit
+  const removeCredit = () => {
+    setCreditApplied(0);
+  };
+
+  // Calculate final total after credit
+  const finalTotal = Math.max(0, totals.grandTotal - creditApplied);
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -81,10 +115,23 @@ const handlePaymentComplete = async (transactionPromise) => {
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto p-6">
+          {/* Products View */}
           {currentView === 'products' && <ProductSearch />}
-       
-          {/* {currentView === 'payment' && <PaymentInterface onComplete={() => setShowReceiptModal(true)} />} */}
-        {currentView === 'payment' && <PaymentInterface onComplete={handlePaymentComplete} />}
+          
+          {/* Payment View */}
+          {currentView === 'payment' && (
+            <div className="space-y-6">
+              {/* ✅ Credit Lookup - ALWAYS show in payment view */}
+              <CreditLookup onCreditFound={handleCreditFound} />
+              
+              {/* Payment Interface */}
+              <PaymentInterface 
+                onComplete={handlePaymentComplete}
+                creditApplied={creditApplied}
+                availableCredit={availableCredit}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -114,9 +161,74 @@ const handlePaymentComplete = async (transactionPromise) => {
           )}
         </div>
 
-        {/* Transaction Summary - TEMPORARY PLACEHOLDER */}
+        {/* Transaction Summary */}
         <div className="flex-1 overflow-auto">
-            <TransactionSummary />
+          <TransactionSummary />
+          
+          {/* ✅ Store Credit Section in Summary */}
+          {hasItems && availableCredit && availableCredit.balance > 0 && (
+            <div className="px-4 py-3 border-t border-gray-200 bg-blue-50">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-900">
+                    Store Credit Available
+                  </span>
+                  <span className="text-lg font-bold text-blue-600">
+                    ${availableCredit.balance.toFixed(2)}
+                  </span>
+                </div>
+                
+                {availableCredit.customer && (
+                  <p className="text-xs text-blue-700">
+                    {availableCredit.customer.name} • {availableCredit.credits.length} credit memo(s)
+                  </p>
+                )}
+                
+                {creditApplied === 0 ? (
+                  <button
+                    onClick={applyCredit}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm"
+                  >
+                    Apply ${Math.min(availableCredit.balance, totals.grandTotal).toFixed(2)} Credit
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                      <span className="text-sm font-medium text-green-600">
+                        ✓ Credit Applied
+                      </span>
+                      <span className="text-sm font-bold text-green-600">
+                        -${creditApplied.toFixed(2)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={removeCredit}
+                      className="w-full px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium transition-colors text-sm"
+                    >
+                      Remove Credit
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* ✅ Final Total After Credit */}
+          {creditApplied > 0 && (
+            <div className="px-4 py-3 border-t-2 border-green-500 bg-green-50">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-700">
+                  Final Total
+                </span>
+                <span className="text-2xl font-bold text-green-600">
+                  ${finalTotal.toFixed(2)}
+                </span>
+              </div>
+              <p className="text-xs text-green-700 mt-1">
+                Credit: -${creditApplied.toFixed(2)} • Balance: ${(availableCredit.balance - creditApplied).toFixed(2)}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions Footer */}
@@ -146,16 +258,15 @@ const handlePaymentComplete = async (transactionPromise) => {
         </div>
       </div>
 
-      
-  {showReceiptModal && (
-    <ReceiptModal 
-      onClose={() => {
-        setShowReceiptModal(false);
-        setCompletedTransaction(null);
-      }} 
-      transaction={completedTransaction} // Pass transaction directly
-    />
-  )}
+      {showReceiptModal && (
+        <ReceiptModal 
+          onClose={() => {
+            setShowReceiptModal(false);
+            setCompletedTransaction(null);
+          }} 
+          transaction={completedTransaction}
+        />
+      )}
     </div>
   );
 };
