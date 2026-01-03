@@ -14,7 +14,7 @@ export const createTransaction = async (transactionData) => {
     try {
         console.log('🔄 Creating transaction in database:', transactionData);
 
-        const response = await fetch(`${API_URL}/api/transactions`, {
+        const response = await fetch(`${API_URL}/transactions`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(transactionData)
@@ -53,9 +53,9 @@ export const fetchTransactions = async (params = {}) => {
         if (params.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
         
-        console.log('🔍 API: Making request to:', `${API_URL}/api/transactions?${queryParams}`);
+        console.log('🔍 API: Making request to:', `${API_URL}/transactions?${queryParams}`);
         
-        const response = await fetch(`${API_URL}/api/transactions?${queryParams}`, {
+        const response = await fetch(`${API_URL}/transactions?${queryParams}`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
@@ -88,7 +88,7 @@ export const fetchDailySales = async (date = new Date()) => {
         const dateString = date.toISOString().split('T')[0];
         console.log('📊 Fetching daily sales for:', dateString);
 
-        const response = await fetch(`${API_URL}/api/transactions/reports/daily?date=${dateString}`, {
+        const response = await fetch(`${API_URL}/transactions/reports/daily?date=${dateString}`, {
             headers: getAuthHeaders()
         });
 
@@ -121,7 +121,7 @@ export const fetchSalesSummary = async (startDate, endDate) => {
         console.log('📊 Fetching sales summary from', startDate, 'to', endDate);
 
         const response = await fetch(
-            `${API_URL}/api/transactions/reports/summary?startDate=${startDate}&endDate=${endDate}`,
+            `${API_URL}/transactions/reports/summary?startDate=${startDate}&endDate=${endDate}`,
             { headers: getAuthHeaders() }
         );
 
@@ -153,7 +153,7 @@ export const fetchTransactionById = async (id) => {
     try {
         console.log('📊 Fetching transaction by ID:', id);
 
-        const response = await fetch(`${API_URL}/api/transactions/${id}`, {
+        const response = await fetch(`${API_URL}/transactions/${id}`, {
             headers: getAuthHeaders()
         });
 
