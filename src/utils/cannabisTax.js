@@ -11,7 +11,13 @@ let taxConfig = {
   },
   cultivationTax: {
     enabled: true,
-    ratePerGram: 0.10, // $0.10 per gram
+    rates: {
+      flower: 0.35,      // $10.08/oz = $0.35/gram
+      trim: 0.05,        // $1.35/oz = $0.05/gram
+      concentrate: 0,    // Tax paid by manufacturer
+      edible: 0,         // Tax paid by manufacturer
+      preroll: 0.35      // Same as flower
+    }
   },
 };
 
@@ -24,8 +30,35 @@ export const getTaxRates = () => ({ ...taxConfig });
 
 // Check if item is subject to cannabis excise tax
 const isCannabisTaxable = (item) => {
-  const cannabisCategories = ['flower', 'edible', 'concentrate', 'pre-roll', 'topical'];
+  // ✅ FIX: Support both singular and plural forms
+  const cannabisCategories = [
+    'flower', 'flowers',
+    'edible', 'edibles',
+    'concentrate', 'concentrates',  // ← Added plural!
+    'pre-roll', 'pre-rolls', 'preroll', 'prerolls',
+    'topical', 'topicals',
+    'vape', 'vapes',
+    'cart', 'carts', 'cartridge', 'cartridges'
+  ];
   return cannabisCategories.includes(item.category?.toLowerCase());
+};
+
+// Get cultivation tax rate based on category
+const getCultivationRate = (category) => {
+  const cat = category?.toLowerCase() || '';
+  
+  // Flower/Pre-rolls
+  if (cat.includes('flower') || cat.includes('pre-roll') || cat.includes('preroll')) {
+    return taxConfig.cultivationTax.rates.flower;
+  }
+  
+  // Trim
+  if (cat.includes('trim') || cat.includes('shake')) {
+    return taxConfig.cultivationTax.rates.trim;
+  }
+  
+  // Concentrates/Edibles/Others - no cultivation tax (paid at source)
+  return 0;
 };
 
 // Calculate tax for a single item
@@ -38,12 +71,13 @@ export const calculateItemTax = (item) => {
   let salesTax = 0;
   let cultivationTax = 0;
 
-  // 1. Cultivation Tax (if enabled, weight-based)
+  // 1. Cultivation Tax (weight-based, varies by category)
   if (taxConfig.cultivationTax.enabled && weight > 0 && isCannabisTaxable(item)) {
-    cultivationTax = weight * taxConfig.cultivationTax.ratePerGram * item.quantity;
+    const ratePerGram = getCultivationRate(item.category);
+    cultivationTax = weight * ratePerGram * item.quantity;
   }
 
-  // 2. Excise Tax (percentage of subtotal, cannabis only)
+  // 2. Excise Tax (15% of retail price, all cannabis products)
   if (taxConfig.exciseTax.enabled && isCannabisTaxable(item)) {
     exciseTax = subtotal * (taxConfig.exciseTax.rate / 100);
   }

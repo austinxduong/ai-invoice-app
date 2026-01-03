@@ -4,7 +4,6 @@ import { usePOSTransaction } from '../context/POSTransaction';
 import axiosInstance from '../utils/axiosInstance';
 import toast from 'react-hot-toast';
 
-// ✅ CHANGE 1: Add credit props
 const PaymentInterface = ({ onComplete, creditApplied = 0, availableCredit = null }) => {
   const { 
     totals, 
@@ -19,12 +18,11 @@ const PaymentInterface = ({ onComplete, creditApplied = 0, availableCredit = nul
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [transaction, setTransaction] = useState(null);
 
-  // ✅ CHANGE 2: Calculate final total after credit
   const finalTotal = Math.max(0, totals.grandTotal - creditApplied);
-  const baseTotal = parseFloat(finalTotal.toFixed(2)); // Use finalTotal instead of totals.grandTotal
+  const baseTotal = parseFloat(finalTotal.toFixed(2));
 
   const quickAmounts = [
-    baseTotal, // Exact amount
+    baseTotal,
     Math.ceil(baseTotal / 1) * 1,
     Math.ceil(baseTotal / 5) * 5,
     Math.ceil(baseTotal / 10) * 10,
@@ -91,28 +89,42 @@ const PaymentInterface = ({ onComplete, creditApplied = 0, availableCredit = nul
     setCashInput(roundedAmount.toFixed(2));
   };
 
-const handleProcessPayment = async () => {
-  if (cashReceived.toFixed(2) < finalTotal.toFixed(2)) {
-    toast.error('Insufficient cash received');
-    return;
-  }
+  const handleProcessPayment = async () => {
+    if (cashReceived.toFixed(2) < finalTotal.toFixed(2)) {
+      toast.error('Insufficient cash received');
+      return;
+    }
 
-  try {
-    // ✅ DEBUG: See what's in items
-    console.log('🔍 Items in cart:', items);
-    console.log('🔍 First item:', items[0]);
-    
-    // Generate transaction ID
-    const transactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const receiptNumber = `RCP-${Date.now()}`;
-    
-    // ✅ Structure data to match backend expectations
-const transactionData = {
-      transactionId: transactionId,
-      items: items.map(item => {
-        console.log('🔍 Mapping item:', item); // Debug
-        return {
-          id: item.id,  // ✅ Make sure this exists!
+    try {
+      const transactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const receiptNumber = `RCP-${Date.now()}`;
+      
+      const actualCashPaid = cashReceived;
+      const creditUsed = creditApplied;
+      const changeGiven = Math.max(0, actualCashPaid - finalTotal);
+      
+      console.log('💰 Payment breakdown:', {
+        originalTotal: totals.grandTotal,
+        creditApplied: creditUsed,
+        finalTotal: finalTotal,
+        cashReceived: actualCashPaid,
+        changeGiven: changeGiven
+      });
+
+      const taxBreakdown = {
+        cultivation: totals.taxBreakdown?.cultivation || totals.cultivationTax || 0,
+        excise: totals.taxBreakdown?.excise || totals.exciseTax || 0,
+        sales: {
+          state: totals.taxBreakdown?.sales?.state || totals.stateSalesTax || 0,
+          county: totals.taxBreakdown?.sales?.county || totals.countySalesTax || 0,
+          city: totals.taxBreakdown?.sales?.city || totals.citySalesTax || 0
+        }
+      };
+      
+      const transactionData = {
+        transactionId: transactionId,
+        items: items.map(item => ({
+          id: item.id || item._id || item.productId,
           name: item.name,
           sku: item.sku,
           category: item.category,
@@ -120,86 +132,115 @@ const transactionData = {
           pricingOption: item.pricingOption,
           quantity: item.quantity,
           cannabis: item.cannabis || {}
-        };
-      }),
-      totals: {
-        subtotal: totals.subtotal,
-        discountAmount: totals.discountAmount || 0,
-        discountedSubtotal: totals.discountedSubtotal || totals.subtotal,
-        taxAmount: totals.taxAmount,
-        grandTotal: totals.grandTotal,
-        changeAmount: cashReceived - finalTotal,
-        creditApplied: creditApplied,  // ✅ Include credit
-        finalTotal: finalTotal          // ✅ Include final total
-      },
-      discount: totals.discountAmount > 0 ? {
-        amount: totals.discountAmount,
-        type: 'manual'
-      } : null,
-      paymentMethod: 'cash',
-      cashReceived: cashReceived,
-      customerInfo: {
-        name: 'Walk-in Customer',
-        phone: '',
-        email: ''
-      },
-      receiptData: {
-        receiptNumber: receiptNumber,
-        timestamp: new Date(),
-        localDateString: new Date().toLocaleDateString('en-US'),
-        localTimeString: new Date().toLocaleTimeString('en-US'),
-        printed: false,
-        emailed: false
-      }
-    };
+        })),
+        totals: {
+          subtotal: totals.subtotal,
+          discountAmount: totals.discountAmount || 0,
+          discountedSubtotal: totals.discountedSubtotal || totals.subtotal,
+          taxAmount: totals.taxAmount,
+          grandTotal: totals.grandTotal,
+          changeAmount: changeGiven,
+          creditApplied: creditUsed,
+          finalTotal: finalTotal,
+          taxBreakdown: taxBreakdown
+        },
+        discount: totals.discountAmount > 0 ? {
+          amount: totals.discountAmount,
+          type: 'manual'
+        } : null,
+        paymentMethod: creditUsed > 0 ? 'cash+credit' : 'cash',
+        cashReceived: actualCashPaid,
+        customerInfo: {
+          name: 'Walk-in Customer',
+          phone: '',
+          email: ''
+        },
+        receiptData: {
+          receiptNumber: receiptNumber,
+          timestamp: new Date(),
+          localDateString: new Date().toLocaleDateString('en-US'),
+          localTimeString: new Date().toLocaleTimeString('en-US'),
+          printed: false,
+          emailed: false,
+          creditApplied: creditUsed,
+          creditMemoNumber: creditUsed > 0 && availableCredit?.credits?.[0]?.creditMemoNumber || null
+        }
+      };
 
-    // Save to database
-    let savedTransaction;
-    try {
-      const response = await axiosInstance.post('/transactions', transactionData);
-      savedTransaction = response.data.transaction;
-      console.log('✅ Transaction saved to database:', savedTransaction._id);
-    } catch (dbError) {
-      console.error('❌ Failed to save transaction:', dbError);
-      toast.error('Failed to create transaction');
-      return;
-    }
-
-    // Apply credit with real transaction ID
-    if (creditApplied > 0 && availableCredit && availableCredit.credits) {
+      // Save to database
+      let savedTransaction;
       try {
-        const firstCredit = availableCredit.credits[0];
-        
-        await axiosInstance.post('/rma/pos/apply-credit', {
-          creditMemoNumber: firstCredit.creditMemoNumber,
-          amountToApply: creditApplied,
-          transactionId: savedTransaction._id,
-          registerId: 'register-1'
-        });
-
-        console.log('✅ Store credit applied to transaction');
-        toast.success(`Store credit applied: $${creditApplied.toFixed(2)}`);
-      } catch (creditError) {
-        console.error('❌ Failed to apply credit:', creditError);
-        toast.error('Transaction complete but credit tracking failed');
+        const response = await axiosInstance.post('/transactions', transactionData);
+        savedTransaction = response.data.transaction;
+        console.log('✅ Transaction saved to database:', savedTransaction._id);
+      } catch (dbError) {
+        console.error('❌ Failed to save transaction:', dbError);
+        toast.error('Failed to create transaction');
+        return;
       }
-    }
 
-    // Update local state with the saved transaction
-    setTransaction(savedTransaction);
-    setPaymentComplete(true);
-  
-    if (onComplete) {
-      onComplete(savedTransaction);
+      // ✅ Apply credit across multiple memos
+      if (creditApplied > 0 && availableCredit && availableCredit.credits) {
+        try {
+          let remainingToApply = creditApplied;
+          const appliedCredits = [];
+          
+          console.log(`💳 Applying $${creditApplied} across ${availableCredit.credits.length} credit memo(s)`);
+          
+          for (const credit of availableCredit.credits) {
+            if (remainingToApply <= 0) break;
+            
+            const amountToApplyToThisCredit = Math.min(
+              credit.remainingBalance,
+              remainingToApply
+            );
+            
+            if (amountToApplyToThisCredit > 0) {
+              console.log(`  Applying $${amountToApplyToThisCredit.toFixed(2)} to ${credit.creditMemoNumber}`);
+              
+              await axiosInstance.post('/rma/pos/apply-credit', {
+                creditMemoNumber: credit.creditMemoNumber,
+                amountToApply: amountToApplyToThisCredit,
+                transactionId: savedTransaction._id,
+                registerId: 'register-1'
+              });
+              
+              appliedCredits.push({
+                memoNumber: credit.creditMemoNumber,
+                amount: amountToApplyToThisCredit
+              });
+              
+              remainingToApply -= amountToApplyToThisCredit;
+            }
+          }
+
+          // Update saved transaction with applied credits
+          savedTransaction.receiptData.appliedCredits = appliedCredits;
+
+          console.log('✅ Store credit applied successfully:', appliedCredits);
+          toast.success(`Store credit applied: $${creditApplied.toFixed(2)} across ${appliedCredits.length} memo(s)`);
+          
+        } catch (creditError) {
+          console.error('❌ Failed to apply credit:', creditError);
+          toast.error('Transaction complete but credit tracking failed');
+        }
+      }
+
+      // Update local state
+      setTransaction(savedTransaction);
+      setPaymentComplete(true);
+    
+      if (onComplete) {
+        onComplete(savedTransaction);
+      }
+      
+      toast.success('Payment successful!');
+      
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('Payment failed: ' + error.message);
     }
-    
-    toast.success('Payment successful!');
-    
-  } catch (error) {
-    console.error('Payment error:', error);
-    toast.error('Payment failed: ' + error.message);
-  }
-};
+  };
 
   const handleNewTransaction = () => {
     setPaymentComplete(false);
@@ -218,7 +259,6 @@ const transactionData = {
 
   return (
     <div className="space-y-6">
-      {/* Payment Header */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -227,14 +267,12 @@ const transactionData = {
           </h2>
           <div className="text-right">
             <p className="text-sm text-gray-600">Total Due</p>
-            {/* ✅ CHANGE 6: Show finalTotal instead of grandTotal */}
             <p className="text-3xl font-bold text-green-600">
               {formatCurrency(finalTotal)}
             </p>
           </div>
         </div>
 
-        {/* ✅ CHANGE 7: Show credit applied notice */}
         {creditApplied > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between">
@@ -255,7 +293,6 @@ const transactionData = {
           </div>
         )}
 
-        {/* Legal Notice */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
           <p className="text-sm text-yellow-800">
             <strong>Cash Only:</strong> In compliance with federal banking regulations, 
@@ -264,14 +301,10 @@ const transactionData = {
         </div>
       </div>
 
-      {/* Cash Input Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Left: Cash Input */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Cash Received</h3>
           
-          {/* Cash Display */}
           <div className="mb-6">
             <div className="text-center p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
               <p className="text-sm text-gray-600 mb-2">Amount Received</p>
@@ -281,7 +314,6 @@ const transactionData = {
             </div>
           </div>
 
-          {/* Quick Amount Buttons */}
           <div className="mb-6">
             <p className="text-sm font-medium text-gray-700 mb-3">Quick Amounts</p>
             <div className="grid grid-cols-2 gap-2">
@@ -297,7 +329,6 @@ const transactionData = {
             </div>
           </div>
 
-          {/* Number Pad */}
           <div className="grid grid-cols-3 gap-2">
             {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((num) => (
               <button
@@ -339,11 +370,9 @@ const transactionData = {
           </div>
         </div>
 
-        {/* Right: Transaction Summary & Change */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Summary</h3>
           
-          {/* Transaction Breakdown */}
           <div className="space-y-3 mb-6">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Items ({items.length})</span>
@@ -369,7 +398,6 @@ const transactionData = {
               </div>
             </div>
 
-            {/* ✅ CHANGE 8: Show credit deduction */}
             {creditApplied > 0 && (
               <>
                 <div className="flex justify-between text-base font-semibold text-green-600">
@@ -385,7 +413,6 @@ const transactionData = {
             )}
           </div>
 
-          {/* Payment Status */}
           <div className="space-y-4">
             <div className={`p-4 rounded-lg border-2 ${
               Math.round(cashReceived * 100) >= Math.round(finalTotal * 100)
@@ -419,7 +446,6 @@ const transactionData = {
               )}
             </div>
             
-            {/* Complete Payment Button */}
             <button
               onClick={handleProcessPayment}
               disabled={parseFloat(cashReceived.toFixed(2)) < parseFloat(finalTotal.toFixed(2))}
@@ -441,7 +467,6 @@ const transactionData = {
   );
 };
 
-// Payment Complete Component (unchanged)
 const PaymentComplete = ({ transaction, onNewTransaction }) => {
   const { clearTransaction } = usePOSTransaction();
 
