@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../utils/axiosInstance';
-import { Clock, MapPin, Save, Info } from 'lucide-react';
+import { Clock, MapPin, Save, Info, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TIMEZONES = [
@@ -31,10 +31,13 @@ const OrganizationSettings = () => {
       closed: []
     },
     location: {
+      facilityName: '',
       address: '',
       city: '',
       state: '',
-      zip: ''
+      zip: '',
+      phone: '',
+      licenseNumber: ''
     }
   });
   
@@ -45,7 +48,6 @@ const OrganizationSettings = () => {
   }, []);
 
   useEffect(() => {
-    // Update current time in selected timezone
     const updateTime = () => {
       const now = new Date();
       const formatted = now.toLocaleString('en-US', {
@@ -121,7 +123,6 @@ const OrganizationSettings = () => {
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Organization Settings</h2>
         <p className="text-gray-600">Configure your organization's timezone and business hours</p>
@@ -151,7 +152,6 @@ const OrganizationSettings = () => {
           </select>
         </div>
 
-        {/* Current Time Display */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -172,7 +172,6 @@ const OrganizationSettings = () => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Business Hours</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Weekday Hours */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">Weekday Hours (Mon-Fri)</h3>
             <div className="space-y-3">
@@ -203,7 +202,6 @@ const OrganizationSettings = () => {
             </div>
           </div>
 
-          {/* Weekend Hours */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">Weekend Hours (Sat-Sun)</h3>
             <div className="space-y-3">
@@ -235,7 +233,6 @@ const OrganizationSettings = () => {
           </div>
         </div>
 
-        {/* Closed Days */}
         <div>
           <h3 className="text-sm font-medium text-gray-700 mb-3">Closed Days</h3>
           <div className="flex flex-wrap gap-2">
@@ -259,21 +256,20 @@ const OrganizationSettings = () => {
         </div>
       </div>
 
-      {/* Location */}
+      {/* Facility Location */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <MapPin className="w-5 h-5 text-green-600" />
+          <Building2 className="w-5 h-5 text-green-600" />
           <h2 className="text-lg font-semibold text-gray-900">Facility Location</h2>
         </div>
 
-        {/* ✅ NEW: Info box explaining the difference */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800">
               <p className="font-medium mb-1">This is your physical dispensary/facility location</p>
               <p className="text-blue-700">
-                Used for timezone, business hours, compliance reporting, and delivery zones. 
+                Used for timezone, business hours, compliance reporting, delivery zones, and POS receipts. 
                 <span className="font-medium"> For invoice billing address, update your Profile → Business Information.</span>
               </p>
             </div>
@@ -281,6 +277,23 @@ const OrganizationSettings = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Facility Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={settings.location.facilityName}
+              onChange={(e) => setSettings({
+                ...settings,
+                location: { ...settings.location, facilityName: e.target.value }
+              })}
+              placeholder="Green Leaf Dispensary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">This will appear on POS receipts</p>
+          </div>
+
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Facility Address</label>
             <input
@@ -294,6 +307,7 @@ const OrganizationSettings = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
             <input
@@ -307,6 +321,7 @@ const OrganizationSettings = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
             <input
@@ -321,6 +336,7 @@ const OrganizationSettings = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
             <input
@@ -333,6 +349,36 @@ const OrganizationSettings = () => {
               placeholder="90001"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              value={settings.location.phone}
+              onChange={(e) => setSettings({
+                ...settings,
+                location: { ...settings.location, phone: e.target.value }
+              })}
+              placeholder="(555) 123-4567"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">Appears on receipts</p>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">License Number</label>
+            <input
+              type="text"
+              value={settings.location.licenseNumber}
+              onChange={(e) => setSettings({
+                ...settings,
+                location: { ...settings.location, licenseNumber: e.target.value }
+              })}
+              placeholder="ABC123456"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">State cannabis license number (appears on receipts)</p>
           </div>
         </div>
       </div>
